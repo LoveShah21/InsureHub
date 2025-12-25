@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}My Policies - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}My Policies{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        {% if policies %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Policy Number</th>
+                        <th>Type</th>
+                        <th>Company</th>
+                        <th>Sum Insured</th>
+                        <th>Status</th>
+                        <th>Valid Until</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for policy in policies %}
+                    <tr>
+                        <td><strong>{{ policy.policy_number }}</strong></td>
+                        <td>{{ policy.insurance_type.type_name }}</td>
+                        <td>{{ policy.insurance_company.company_name }}</td>
+                        <td>₹{{ policy.sum_insured|floatformat:0 }}</td>
+                        <td>
+                            <span
+                                class="badge bg-{% if policy.status == 'ACTIVE' %}success{% elif policy.status == 'EXPIRED' %}danger{% else %}secondary{% endif %}">
+                                {{ policy.status }}
+                            </span>
+                        </td>
+                        <td>{{ policy.policy_end_date|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'customer_policy_detail' policy.pk %}"
+                                class="btn btn-outline-primary btn-sm">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-shield-x display-1 text-muted"></i>
+            <h5 class="mt-3">No Policies Yet</h5>
+            <p class="text-muted">Complete a payment to get your first policy.</p>
+            <a href="{% url 'customer_quotes' %}" class="btn btn-primary">View Quotes</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

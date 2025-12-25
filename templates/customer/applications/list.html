@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}My Applications - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}My Applications{% endblock %}
+
+{% block topbar_right %}
+<a href="{% url 'customer_application_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus"></i> New Application
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        {% if applications %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Application #</th>
+                        <th>Insurance Type</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td><strong>{{ app.application_number }}</strong></td>
+                        <td>{{ app.insurance_type.type_name }}</td>
+                        <td>
+                            <span
+                                class="badge bg-{% if app.status == 'APPROVED' %}success{% elif app.status == 'REJECTED' %}danger{% elif app.status == 'SUBMITTED' %}primary{% else %}secondary{% endif %}">
+                                {{ app.status }}
+                            </span>
+                        </td>
+                        <td>{{ app.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'customer_application_detail' app.pk %}"
+                                class="btn btn-outline-primary btn-sm">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-x display-1 text-muted"></i>
+            <h5 class="mt-3">No Applications Yet</h5>
+            <p class="text-muted">Start your first insurance application.</p>
+            <a href="{% url 'customer_application_create' %}" class="btn btn-primary">New Application</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Backoffice{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'backoffice_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Backoffice Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="stat-card orange">
+            <div class="stat-value">{{ pending_applications }}</div>
+            <div class="stat-label">Pending Applications</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="stat-card purple">
+            <div class="stat-value">{{ pending_claims }}</div>
+            <div class="stat-label">Pending Claims</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-file-earmark-text"></i> Recent Applications
+            </div>
+            <div class="card-body">
+                {% if recent_applications %}
+                <div class="list-group list-group-flush">
+                    {% for app in recent_applications %}
+                    <a href="{% url 'backoffice_application_detail' app.pk %}"
+                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ app.application_number }}</strong>
+                            <br><small class="text-muted">{{ app.customer.user.email }}</small>
+                        </div>
+                        <span class="badge bg-warning">{{ app.status }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No pending applications</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clipboard-check"></i> Recent Claims
+            </div>
+            <div class="card-body">
+                {% if recent_claims %}
+                <div class="list-group list-group-flush">
+                    {% for claim in recent_claims %}
+                    <a href="{% url 'backoffice_claim_detail' claim.pk %}"
+                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ claim.claim_number }}</strong>
+                            <br><small class="text-muted">₹{{ claim.amount_requested|floatformat:0 }}</small>
+                        </div>
+                        <span class="badge bg-warning">{{ claim.status }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No pending claims</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

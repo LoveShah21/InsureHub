@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}My Quotes - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}My Quotes{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        {% if quotes %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Quote Number</th>
+                        <th>Company</th>
+                        <th>Premium</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Valid Until</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for quote in quotes %}
+                    <tr>
+                        <td><strong>{{ quote.quote_number }}</strong></td>
+                        <td>{{ quote.insurance_company.company_name }}</td>
+                        <td>₹{{ quote.total_premium_with_gst|floatformat:0 }}</td>
+                        <td>
+                            <span
+                                class="badge bg-{% if quote.overall_score >= 80 %}success{% elif quote.overall_score >= 60 %}warning{% else %}secondary{% endif %}">
+                                {{ quote.overall_score|floatformat:0 }}%
+                            </span>
+                        </td>
+                        <td>
+                            <span
+                                class="badge bg-{% if quote.status == 'ACCEPTED' %}success{% elif quote.status == 'EXPIRED' %}danger{% else %}primary{% endif %}">
+                                {{ quote.status }}
+                            </span>
+                        </td>
+                        <td>{{ quote.valid_until|date:"M d, Y" }}</td>
+                        <td>
+                            {% if quote.status == 'ACCEPTED' %}
+                            <a href="{% url 'customer_payment' quote.pk %}" class="btn btn-success btn-sm">
+                                <i class="bi bi-credit-card"></i> Pay Now
+                            </a>
+                            {% else %}
+                            <a href="{% url 'customer_quote_detail' quote.pk %}" class="btn btn-outline-primary btn-sm">
+                                View
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-calculator display-1 text-muted"></i>
+            <h5 class="mt-3">No Quotes Yet</h5>
+            <p class="text-muted">Submit an application to get quotes.</p>
+            <a href="{% url 'customer_application_create' %}" class="btn btn-primary">New Application</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

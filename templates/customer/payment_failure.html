@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Failed - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Payment Failed{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body py-5">
+                <div class="mb-4">
+                    <i class="bi bi-x-circle-fill text-danger" style="font-size: 5rem;"></i>
+                </div>
+                <h2 class="text-danger mb-3">Payment Failed</h2>
+                <p class="text-muted mb-4">
+                    Unfortunately, your payment could not be processed.
+                </p>
+
+                {% if request.GET.reason %}
+                <div class="alert alert-danger">
+                    <strong>Reason:</strong> {{ request.GET.reason }}
+                </div>
+                {% endif %}
+
+                <p class="small text-muted">
+                    Don't worry - no money has been deducted from your account.
+                    Your quote is still valid and you can try again.
+                </p>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                    <a href="{% url 'customer_quotes' %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat"></i> Try Again
+                    </a>
+                    <a href="{% url 'customer_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-house"></i> Go to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

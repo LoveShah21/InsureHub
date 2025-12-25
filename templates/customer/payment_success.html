@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Successful - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Payment Successful{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body py-5">
+                <div class="mb-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h2 class="text-success mb-3">Payment Successful!</h2>
+                <p class="text-muted mb-4">
+                    Your payment has been processed successfully and your policy has been issued.
+                </p>
+
+                {% if request.GET.policy %}
+                <div class="alert alert-success">
+                    <strong>Policy Number:</strong> {{ request.GET.policy }}
+                </div>
+                {% endif %}
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                    <a href="{% url 'customer_policies' %}" class="btn btn-primary">
+                        <i class="bi bi-shield-check"></i> View My Policies
+                    </a>
+                    <a href="{% url 'customer_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-house"></i> Go to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

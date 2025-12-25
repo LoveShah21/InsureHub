@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}InsureHub - Intelligent Insurance Management{% endblock %}
+
+{% block body %}
+<div class="auth-page" style="background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 50%, #16213e 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center text-white">
+                <h1 class="display-4 mb-4">
+                    <i class="bi bi-shield-check"></i> InsureHub
+                </h1>
+                <p class="lead mb-5">
+                    Intelligent Insurance Policy Management & Decision Support System
+                </p>
+
+                <div class="row g-4 mb-5">
+                    <div class="col-md-4">
+                        <div class="p-4 bg-white bg-opacity-10 rounded-3">
+                            <i class="bi bi-lightning-charge display-4 text-warning"></i>
+                            <h5 class="mt-3">Quick Quotes</h5>
+                            <p class="small opacity-75">Get instant quotes from multiple insurers</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-4 bg-white bg-opacity-10 rounded-3">
+                            <i class="bi bi-graph-up-arrow display-4 text-success"></i>
+                            <h5 class="mt-3">Smart Comparison</h5>
+                            <p class="small opacity-75">AI-powered recommendations for best policies</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-4 bg-white bg-opacity-10 rounded-3">
+                            <i class="bi bi-shield-lock display-4 text-info"></i>
+                            <h5 class="mt-3">Secure Payments</h5>
+                            <p class="small opacity-75">Razorpay secured transactions</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-3 d-md-flex justify-content-md-center">
+                    <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-box-arrow-in-right"></i> Sign In
+                    </a>
+                    <a href="{% url 'register' %}" class="btn btn-outline-light btn-lg px-5">
+                        <i class="bi bi-person-plus"></i> Register
+                    </a>
+                </div>
+
+                <p class="mt-5 small opacity-50">
+                    Final Year University Project - Insurance Policy Management System
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
