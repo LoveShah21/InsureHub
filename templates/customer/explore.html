@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+
+{% block title %}Explore Insurance - InsureHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .explore-hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+        color: white;
+        padding: 3rem 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+    }
+    .filter-sidebar {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+    }
+    .product-card {
+        border-radius: 0.75rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .product-card .card-header {
+        border-radius: 0.75rem 0.75rem 0 0;
+    }
+    .badge-popular { background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%); }
+    .badge-family { background: linear-gradient(135deg, #4ecdc4 0%, #2ab7ca 100%); }
+    .badge-budget { background: linear-gradient(135deg, #45b649 0%, #00c853 100%); }
+    .badge-premium { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .premium-range {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    .coverage-list {
+        max-height: 120px;
+        overflow: hidden;
+    }
+    .company-logos {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .company-logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .search-box {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .search-box .form-control {
+        border-radius: 2rem 0 0 2rem;
+        padding: 0.75rem 1.5rem;
+    }
+    .search-box .btn {
+        border-radius: 0 2rem 2rem 0;
+        padding: 0.75rem 1.5rem;
+    }
+    .no-results {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    .no-results i {
+        font-size: 4rem;
+        color: #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'policy_explore' %}">
+        <i class="bi bi-search"></i> Explore
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Explore Insurance{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="explore-hero">
+    <h2 class="mb-3"><i class="bi bi-shield-check"></i> Find Your Perfect Insurance</h2>
+    <p class="mb-4">Compare policies from top insurance providers and find the best coverage for your needs.</p>
+    
+    <form id="searchForm" class="search-box">
+        <div class="input-group">
+            <input type="text" class="form-control" id="searchQuery" name="q" 
+                   placeholder="Search insurance types, categories..." value="{{ request.GET.q }}">
+            <button class="btn btn-light" type="submit">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+        <div class="filter-sidebar">
+            <h5 class="mb-3"><i class="bi bi-funnel"></i> Filters</h5>
+            
+            <form id="filterForm">
+                <input type="hidden" name="q" id="filterQuery" value="{{ request.GET.q }}">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Category</label>
+                    <select class="form-select" name="category" id="categoryFilter">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Insurance Company</label>
+                    <select class="form-select" name="company" id="companyFilter">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Premium Range</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" class="form-control" name="min_premium" 
+                                   placeholder="Min ₹" id="minPremium">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" name="max_premium" 
+                                   placeholder="Max ₹" id="maxPremium">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Sort By</label>
+                    <select class="form-select" name="sort" id="sortFilter">
+                        <option value="popular">Most Popular</option>
+                        <option value="premium_asc">Premium: Low to High</option>
+                        <option value="premium_desc">Premium: High to Low</option>
+                    </select>
+                </div>
+                
+                <button type="button" id="applyFilters" class="btn btn-primary w-100">
+                    <i class="bi bi-check"></i> Apply Filters
+                </button>
+                <button type="button" id="clearFilters" class="btn btn-outline-secondary w-100 mt-2">
+                    <i class="bi bi-x"></i> Clear All
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Products Grid -->
+    <div class="col-lg-9">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 id="resultsCount"><span class="spinner-border spinner-border-sm"></span> Loading...</h5>
+        </div>
+        
+        <div id="productsGrid" class="row g-4">
+            <!-- Products will be loaded here -->
+        </div>
+        
+        <div id="noResults" class="no-results d-none">
+            <i class="bi bi-search"></i>
+            <h4 class="mt-3">No Insurance Products Found</h4>
+            <p class="text-muted">Try adjusting your filters or search terms.</p>
+        </div>
+        
+        <!-- Pagination -->
+        <nav id="pagination" class="mt-4 d-none">
+            <ul class="pagination justify-content-center">
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let totalPages = 1;
+let filterData = {};
+
+async function loadProducts() {
+    const grid = document.getElementById('productsGrid');
+    const noResults = document.getElementById('noResults');
+    const resultsCount = document.getElementById('resultsCount');
+    
+    grid.innerHTML = '<div class="col-12 text-center"><div class="spinner-border"></div></div>';
+    noResults.classList.add('d-none');
+    
+    // Build query params
+    const params = new URLSearchParams();
+    if (filterData.q) params.set('q', filterData.q);
+    if (filterData.category) params.set('category', filterData.category);
+    if (filterData.company) params.set('company', filterData.company);
+    if (filterData.min_premium) params.set('min_premium', filterData.min_premium);
+    if (filterData.max_premium) params.set('max_premium', filterData.max_premium);
+    if (filterData.sort) params.set('sort', filterData.sort);
+    params.set('page', currentPage);
+    
+    try {
+        const response = await fetch('/api/v1/policies/explore/?' + params.toString(), {
+            credentials: 'include'
+        });
+        const data = await response.json();
+        
+        // Populate filters
+        populateFilters(data.filters);
+        
+        totalPages = data.total_pages;
+        resultsCount.textContent = `${data.count} insurance product${data.count !== 1 ? 's' : ''} found`;
+        
+        if (data.results.length === 0) {
+            grid.innerHTML = '';
+            noResults.classList.remove('d-none');
+            document.getElementById('pagination').classList.add('d-none');
+            return;
+        }
+        
+        // Render products
+        grid.innerHTML = data.results.map(product => renderProductCard(product)).join('');
+        
+        // Render pagination
+        renderPagination(data.page, data.total_pages);
+        
+    } catch (err) {
+        grid.innerHTML = '<div class="col-12 text-center text-danger">Error loading products. Please try again.</div>';
+        console.error(err);
+    }
+}
+
+function renderProductCard(product) {
+    const badges = product.badges.map(b => 
+        `<span class="badge badge-${b.type} me-1">${b.label}</span>`
+    ).join('');
+    
+    const coverages = product.coverages.slice(0, 3).map(c => 
+        `<li class="small"><i class="bi bi-check text-success"></i> ${c.coverage_name}</li>`
+    ).join('');
+    
+    const companies = product.companies.slice(0, 4).map(c => 
+        `<div class="company-logo" title="${c.name}">${c.name.charAt(0)}</div>`
+    ).join('');
+    
+    const moreCompanies = product.companies.length > 4 ? 
+        `<div class="company-logo">+${product.companies.length - 4}</div>` : '';
+    
+    return `
+        <div class="col-md-6 col-lg-4">
+            <div class="card product-card">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${product.name}</h6>
+                            <small class="text-muted">${product.category}</small>
+                        </div>
+                        <i class="bi bi-${product.icon || 'shield'} fs-3 text-primary"></i>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">${badges || '<span class="badge bg-secondary">Standard</span>'}</div>
+                    
+                    <p class="small text-muted mb-2">${(product.description || '').substring(0, 80)}...</p>
+                    
+                    <div class="premium-range mb-3">
+                        ₹${product.base_premium_range.min.toLocaleString()} - ₹${product.base_premium_range.max.toLocaleString()}
+                        <small class="text-muted fw-normal">/year</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="small">Key Coverages:</strong>
+                        <ul class="list-unstyled coverage-list mb-0">
+                            ${coverages || '<li class="small text-muted">Contact for details</li>'}
+                        </ul>
+                        ${product.total_coverages > 3 ? `<small class="text-primary">+${product.total_coverages - 3} more</small>` : ''}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="small">Available from:</strong>
+                        <div class="company-logos mt-1">
+                            ${companies}${moreCompanies}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0">
+                    <a href="/customer/insurance/${product.id}/" class="btn btn-primary w-100">
+                        <i class="bi bi-eye"></i> View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function populateFilters(filters) {
+    // Categories
+    const catSelect = document.getElementById('categoryFilter');
+    if (catSelect.options.length <= 1) {
+        filters.categories.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            catSelect.appendChild(opt);
+        });
+    }
+    
+    // Companies
+    const compSelect = document.getElementById('companyFilter');
+    if (compSelect.options.length <= 1) {
+        filters.companies.forEach(comp => {
+            const opt = document.createElement('option');
+            opt.value = comp.id;
+            opt.textContent = comp.company_name;
+            compSelect.appendChild(opt);
+        });
+    }
+}
+
+function renderPagination(current, total) {
+    const nav = document.getElementById('pagination');
+    if (total <= 1) {
+        nav.classList.add('d-none');
+        return;
+    }
+    
+    nav.classList.remove('d-none');
+    const ul = nav.querySelector('ul');
+    ul.innerHTML = '';
+    
+    // Previous
+    ul.innerHTML += `<li class="page-item ${current === 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="goToPage(${current - 1}); return false;">Previous</a>
+    </li>`;
+    
+    // Pages
+    for (let i = 1; i <= total; i++) {
+        ul.innerHTML += `<li class="page-item ${i === current ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>
+        </li>`;
+    }
+    
+    // Next
+    ul.innerHTML += `<li class="page-item ${current === total ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="goToPage(${current + 1}); return false;">Next</a>
+    </li>`;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    loadProducts();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Event listeners
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    filterData.q = document.getElementById('searchQuery').value;
+    currentPage = 1;
+    loadProducts();
+});
+
+document.getElementById('applyFilters').addEventListener('click', function() {
+    filterData = {
+        q: document.getElementById('searchQuery').value,
+        category: document.getElementById('categoryFilter').value,
+        company: document.getElementById('companyFilter').value,
+        min_premium: document.getElementById('minPremium').value,
+        max_premium: document.getElementById('maxPremium').value,
+        sort: document.getElementById('sortFilter').value,
+    };
+    currentPage = 1;
+    loadProducts();
+});
+
+document.getElementById('clearFilters').addEventListener('click', function() {
+    document.getElementById('filterForm').reset();
+    document.getElementById('searchQuery').value = '';
+    filterData = {};
+    currentPage = 1;
+    loadProducts();
+});
+
+// Initial load
+document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+{% endblock %}

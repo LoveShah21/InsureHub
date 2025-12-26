@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block title %}Application {{ application.application_number }} - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Application Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-text"></i> {{ application.application_number }}</span>
+                <span
+                    class="badge bg-{% if application.status == 'APPROVED' %}success{% elif application.status == 'REJECTED' %}danger{% elif application.status == 'SUBMITTED' %}primary{% elif application.status == 'UNDER_REVIEW' %}warning{% else %}secondary{% endif %} fs-6">
+                    {{ application.status }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Insurance Type</label>
+                        <p class="fw-bold mb-0">{{ application.insurance_type.type_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Coverage Amount</label>
+                        <p class="fw-bold mb-0">₹{{ application.requested_coverage_amount|floatformat:0|default:"Not
+                            specified" }}</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Policy Tenure</label>
+                        <p class="fw-bold mb-0">{{ application.policy_tenure_months }} Months</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Created On</label>
+                        <p class="fw-bold mb-0">{{ application.created_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                </div>
+
+                {% if application.submission_date %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Submitted On</label>
+                        <p class="fw-bold mb-0">{{ application.submission_date|date:"F d, Y H:i" }}</p>
+                    </div>
+                    {% if application.approval_date %}
+                    <div class="col-md-6">
+                        <label class="text-muted small">Approved On</label>
+                        <p class="fw-bold mb-0">{{ application.approval_date|date:"F d, Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if application.rejection_reason %}
+                <div class="alert alert-danger">
+                    <strong>Rejection Reason:</strong> {{ application.rejection_reason }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions based on status -->
+        {% if application.status == 'DRAFT' %}
+        <div class="card">
+            <div class="card-body">
+                <h5>Ready to Submit?</h5>
+                <p class="text-muted">Once you submit your application, our team will review it and generate quotes for
+                    you.</p>
+                <button id="submitBtn" class="btn btn-primary btn-lg">
+                    <i class="bi bi-send"></i> Submit Application
+                </button>
+            </div>
+        </div>
+        {% elif application.status == 'APPROVED' %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="text-success"><i class="bi bi-check-circle"></i> Application Approved!</h5>
+                <p>Your application has been approved. You can now view and accept quotes.</p>
+                <a href="{% url 'customer_quotes' %}" class="btn btn-success btn-lg">
+                    <i class="bi bi-calculator"></i> View Quotes
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Timeline
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Created</strong>
+                            <p class="text-muted small mb-0">{{ application.created_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+
+                    {% if application.submission_date %}
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Submitted</strong>
+                            <p class="text-muted small mb-0">{{ application.submission_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if application.review_start_date %}
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Under Review</strong>
+                            <p class="text-muted small mb-0">{{ application.review_start_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if application.approval_date %}
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Approved</strong>
+                            <p class="text-muted small mb-0">{{ application.approval_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{% url 'customer_applications' %}" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-arrow-left"></i> Back to Applications
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    {% if application.status == 'DRAFT' %}
+    document.getElementById('submitBtn').addEventListener('click', async function () {
+        if (!confirm('Are you sure you want to submit this application? You cannot edit it after submission.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v1/applications/{{ application.id }}/submit/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || JSON.stringify(error)));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

@@ -87,10 +87,11 @@ class InsuranceApplicationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InsuranceApplication
         fields = [
-            'insurance_type', 'application_data',
+            'id', 'application_number', 'insurance_type', 'application_data',
             'requested_coverage_amount', 'policy_tenure_months',
             'budget_min', 'budget_max'
         ]
+        read_only_fields = ['id', 'application_number']
     
     def create(self, validated_data):
         request = self.context.get('request')

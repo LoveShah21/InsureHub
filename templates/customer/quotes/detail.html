@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}Quote Details - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Quote Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-calculator"></i> {{ quote.quote_number }}</span>
+                <span
+                    class="badge bg-{% if quote.status == 'ACCEPTED' %}success{% elif quote.status == 'EXPIRED' %}danger{% else %}primary{% endif %} fs-6">
+                    {{ quote.status }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Insurance Company</label>
+                        <p class="fw-bold fs-5 mb-0">{{ quote.insurance_company.company_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Insurance Type</label>
+                        <p class="fw-bold mb-0">{{ quote.insurance_type.type_name }}</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Sum Insured</label>
+                        <p class="fw-bold text-primary fs-4 mb-0">₹{{ quote.sum_insured|floatformat:0 }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Policy Tenure</label>
+                        <p class="fw-bold mb-0">{{ quote.policy_tenure_months }} Months</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Valid Until</label>
+                        <p class="fw-bold mb-0">{{ quote.valid_until|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5 class="mb-3"><i class="bi bi-cash-stack"></i> Premium Breakdown</h5>
+                <table class="table table-borderless">
+                    <tr>
+                        <td>Base Premium</td>
+                        <td class="text-end">₹{{ quote.base_premium|floatformat:2 }}</td>
+                    </tr>
+                    {% if quote.coverage_premium %}
+                    <tr>
+                        <td>Coverage Premium</td>
+                        <td class="text-end">₹{{ quote.coverage_premium|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if quote.rider_premium %}
+                    <tr>
+                        <td>Rider Premium</td>
+                        <td class="text-end">₹{{ quote.rider_premium|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if quote.discount_amount %}
+                    <tr class="text-success">
+                        <td>Discount</td>
+                        <td class="text-end">-₹{{ quote.discount_amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td><strong>Final Premium</strong></td>
+                        <td class="text-end"><strong>₹{{ quote.final_premium|floatformat:2 }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>GST (18%)</td>
+                        <td class="text-end">₹{{ quote.gst_amount|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="table-primary">
+                        <td><strong class="fs-5">Total Amount</strong></td>
+                        <td class="text-end"><strong class="fs-5 text-primary">₹{{ quote.total_premium_with_gst|floatformat:2 }}</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        {% if quote.status == 'GENERATED' %}
+        <div class="card">
+            <div class="card-body text-center">
+                <h5>Ready to proceed?</h5>
+                <p class="text-muted">Accept this quote to continue to payment.</p>
+                <button id="acceptBtn" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle"></i> Accept Quote
+                </button>
+            </div>
+        </div>
+        {% elif quote.status == 'ACCEPTED' %}
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="text-success"><i class="bi bi-check-circle"></i> Quote Accepted!</h5>
+                <p class="text-muted">Proceed to payment to get your policy.</p>
+                <a href="{% url 'customer_payment' quote.pk %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-credit-card"></i> Pay Now - ₹{{ quote.total_premium_with_gst|floatformat:2 }}
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        {% if recommendations %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-stars"></i> Recommended Quotes
+            </div>
+            <div class="card-body">
+                {% for rec in recommendations %}
+                {% if rec.recommended_quote.id != quote.id %}
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                    <div>
+                        <strong>{{ rec.recommended_quote.insurance_company.company_name }}</strong>
+                        <p class="text-muted small mb-0">₹{{ rec.recommended_quote.total_premium_with_gst|floatformat:2
+                            }}</p>
+                    </div>
+                    <a href="{% url 'customer_quote_detail' rec.recommended_quote.pk %}"
+                        class="btn btn-sm btn-outline-primary">View</a>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> Quote Info
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">
+                    <strong>Quote Generated:</strong><br>
+                    {{ quote.generated_at|date:"F d, Y H:i" }}
+                </p>
+                <p class="small text-muted mb-0">
+                    <strong>Application:</strong><br>
+                    {{ quote.application.application_number }}
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{% url 'customer_quotes' %}" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-arrow-left"></i> Back to Quotes
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    {% if quote.status == 'GENERATED' %}
+    document.getElementById('acceptBtn').addEventListener('click', async function () {
+        if (!confirm('Accept this quote and proceed to payment?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v1/quotes/{{ quote.id }}/accept/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                window.location.href = '{% url "customer_payment" quote.pk %}';
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || JSON.stringify(error)));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

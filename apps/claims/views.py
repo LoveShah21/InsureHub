@@ -46,14 +46,38 @@ class ClaimViewSet(viewsets.ModelViewSet):
         
         # Backoffice sees all
         if user.user_roles.filter(role__role_name__in=['ADMIN', 'BACKOFFICE']).exists():
-            return Claim.objects.select_related(
+            queryset = Claim.objects.select_related(
                 'customer__user', 'policy'
             ).prefetch_related('documents').all()
+        else:
+            # Customers see only their own
+            queryset = Claim.objects.select_related(
+                'customer__user', 'policy'
+            ).prefetch_related('documents').filter(customer__user=user)
         
-        # Customers see only their own
-        return Claim.objects.select_related(
-            'customer__user', 'policy'
-        ).prefetch_related('documents').filter(customer__user=user)
+        # Search functionality
+        from django.db.models import Q
+        search_query = self.request.query_params.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(claim_number__icontains=search_query) |
+                Q(policy__policy_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(customer__user__first_name__icontains=search_query) |
+                Q(customer__user__last_name__icontains=search_query)
+            )
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status__iexact=status_filter)
+        
+        # Filter by claim type
+        claim_type = self.request.query_params.get('claim_type')
+        if claim_type:
+            queryset = queryset.filter(claim_type__iexact=claim_type)
+        
+        return queryset.distinct()
     
     def get_serializer_class(self):
         if self.action == 'create':

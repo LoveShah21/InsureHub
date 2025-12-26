@@ -47,14 +47,48 @@ class QuoteViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Backoffice sees all
         if user.user_roles.filter(role__role_name__in=['ADMIN', 'BACKOFFICE']).exists():
-            return Quote.objects.select_related(
+            queryset = Quote.objects.select_related(
                 'customer__user', 'insurance_type', 'insurance_company'
             ).prefetch_related('coverages', 'addons').all()
+        else:
+            # Customers see only their own
+            queryset = Quote.objects.select_related(
+                'customer__user', 'insurance_type', 'insurance_company'
+            ).prefetch_related('coverages', 'addons').filter(customer__user=user)
         
-        # Customers see only their own
-        return Quote.objects.select_related(
-            'customer__user', 'insurance_type', 'insurance_company'
-        ).prefetch_related('coverages', 'addons').filter(customer__user=user)
+        # Search functionality
+        from django.db.models import Q
+        search_query = self.request.query_params.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(quote_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(customer__user__first_name__icontains=search_query) |
+                Q(customer__user__last_name__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query) |
+                Q(insurance_company__company_name__icontains=search_query)
+            )
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status__iexact=status_filter)
+        
+        # Filter by company
+        company = self.request.query_params.get('company')
+        if company:
+            queryset = queryset.filter(insurance_company_id=company)
+        
+        # Filter by premium range
+        min_premium = self.request.query_params.get('min_premium')
+        if min_premium:
+            queryset = queryset.filter(total_premium_with_gst__gte=min_premium)
+        
+        max_premium = self.request.query_params.get('max_premium')
+        if max_premium:
+            queryset = queryset.filter(total_premium_with_gst__lte=max_premium)
+        
+        return queryset.distinct()
     
     def get_serializer_class(self):
         if self.action == 'list':

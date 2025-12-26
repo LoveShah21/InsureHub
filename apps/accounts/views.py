@@ -158,6 +158,8 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     
     GET /api/v1/users/           - List all users
     GET /api/v1/users/{id}/      - Retrieve user details
+    
+    Search params: ?q= (email, name), ?role=, ?is_active=
     """
     queryset = User.objects.prefetch_related('user_roles__role').all()
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -166,6 +168,35 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         if self.action == 'list':
             return UserListSerializer
         return UserSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Search functionality
+        search_query = self.request.query_params.get('q', '').strip()
+        if search_query:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(email__icontains=search_query) |
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(phone_number__icontains=search_query)
+            )
+        
+        # Filter by role
+        role = self.request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(user_roles__role__role_name__iexact=role)
+        
+        # Filter by active status
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            if is_active.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(is_active=True)
+            elif is_active.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(is_active=False)
+        
+        return queryset.distinct()
     
     @action(detail=True, methods=['post'], url_path='assign-role')
     def assign_role(self, request, pk=None):

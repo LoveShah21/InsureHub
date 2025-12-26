@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Policy Details - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Policy Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-shield-check"></i> {{ policy.policy_number }}</span>
+                <span
+                    class="badge bg-{% if policy.status == 'ACTIVE' %}success{% elif policy.status == 'EXPIRED' %}danger{% else %}secondary{% endif %} fs-6">
+                    {{ policy.status }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Insurance Company</label>
+                        <p class="fw-bold fs-5 mb-0">{{ policy.insurance_company.company_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Insurance Type</label>
+                        <p class="fw-bold mb-0">{{ policy.insurance_type.type_name }}</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Sum Insured</label>
+                        <p class="fw-bold text-primary fs-4 mb-0">₹{{ policy.sum_insured|floatformat:0 }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Start Date</label>
+                        <p class="fw-bold mb-0">{{ policy.policy_start_date|date:"M d, Y" }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">End Date</label>
+                        <p class="fw-bold mb-0">{{ policy.policy_end_date|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Premium Paid</label>
+                        <p class="fw-bold mb-0">₹{{ policy.total_premium_with_gst|floatformat:2 }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Policy Tenure</label>
+                        <p class="fw-bold mb-0">{{ policy.policy_tenure_months }} Months</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Issued On</label>
+                        <p class="fw-bold mb-0">{{ policy.issued_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if policy.status == 'ACTIVE' %}
+        <div class="card">
+            <div class="card-body">
+                <h5>Need to file a claim?</h5>
+                <p class="text-muted">You can file a claim against this active policy.</p>
+                <a href="{% url 'customer_claim_create' %}" class="btn btn-warning">
+                    <i class="bi bi-clipboard-plus"></i> File a Claim
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-calendar-check"></i> Policy Status
+            </div>
+            <div class="card-body">
+                {% if policy.is_active %}
+                <div class="text-center text-success">
+                    <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
+                    <h5 class="mt-2">Active</h5>
+                    <p class="text-muted small">{{ policy.days_until_expiry }} days until renewal</p>
+                </div>
+                {% else %}
+                <div class="text-center text-danger">
+                    <i class="bi bi-x-circle" style="font-size: 3rem;"></i>
+                    <h5 class="mt-2">Inactive</h5>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{% url 'customer_policies' %}" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-arrow-left"></i> Back to Policies
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

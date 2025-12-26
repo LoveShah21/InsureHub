@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+
+{% block title %}Insurance Types - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-grid"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_companies' %}">
+        <i class="bi bi-building"></i> Companies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_payments' %}">
+        <i class="bi bi-credit-card"></i> Payments
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Insurance Types{% endblock %}
+
+{% block topbar_right %}
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTypeModal">
+    <i class="bi bi-plus"></i> Add Insurance Type
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Search Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Search by name, code, or description..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="is_active">
+                    <option value="">All Status</option>
+                    <option value="true" {% if request.GET.is_active == 'true' %}selected{% endif %}>Active</option>
+                    <option value="false" {% if request.GET.is_active == 'false' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Insurance Types Catalog</span>
+        <small class="text-muted">{{ types|length }} result(s)</small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Type Code</th>
+                        <th>Base Premium</th>
+                        <th>Status</th>
+                        <th>Coverages</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type in types %}
+                    <tr>
+                        <td>{{ type.id }}</td>
+                        <td>
+                            <strong>{{ type.type_name }}</strong>
+                            <p class="text-muted small mb-0">{{ type.description|truncatewords:10 }}</p>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ type.type_code }}</span></td>
+                        <td>₹{{ type.min_premium|floatformat:0|default:"0" }} - ₹{{ type.max_premium|floatformat:0|default:"0" }}</td>
+                        <td>
+                            {% if type.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ type.coverage_count }} coverages</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editType({{ type.id }}, '{{ type.type_name }}', '{{ type.type_code }}', '{{ type.description|escapejs }}', {{ type.is_active|yesno:'true,false' }})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-{{ type.is_active|yesno:'warning,success' }}" onclick="toggleStatus({{ type.id }}, {{ type.is_active|yesno:'true,false' }})">
+                                <i class="bi bi-{{ type.is_active|yesno:'pause,play' }}"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">No insurance types found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Insurance Type Modal -->
+<div class="modal fade" id="addTypeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Add Insurance Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTypeForm">
+                    <div class="mb-3">
+                        <label class="form-label">Type Name *</label>
+                        <input type="text" class="form-control" id="typeName" required placeholder="e.g., Motor Insurance">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type Code *</label>
+                        <input type="text" class="form-control" id="typeCode" required placeholder="e.g., MOTOR" style="text-transform: uppercase;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="typeDescription" rows="3" placeholder="Description of this insurance type"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="typeActive" checked>
+                        <label class="form-check-label" for="typeActive">Active</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveType()">
+                    <i class="bi bi-check"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Insurance Type Modal -->
+<div class="modal fade" id="editTypeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit Insurance Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editTypeForm">
+                    <input type="hidden" id="editTypeId">
+                    <div class="mb-3">
+                        <label class="form-label">Type Name *</label>
+                        <input type="text" class="form-control" id="editTypeName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type Code *</label>
+                        <input type="text" class="form-control" id="editTypeCode" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="editTypeDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="editTypeActive">
+                        <label class="form-check-label" for="editTypeActive">Active</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateType()">
+                    <i class="bi bi-check"></i> Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+           document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
+}
+
+async function saveType() {
+    const data = {
+        type_name: document.getElementById('typeName').value,
+        type_code: document.getElementById('typeCode').value.toUpperCase(),
+        description: document.getElementById('typeDescription').value,
+        is_active: document.getElementById('typeActive').checked
+    };
+    
+    try {
+        const response = await fetch('/api/v1/insurance-types/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + JSON.stringify(error));
+        }
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+function editType(id, name, code, description, isActive) {
+    document.getElementById('editTypeId').value = id;
+    document.getElementById('editTypeName').value = name;
+    document.getElementById('editTypeCode').value = code;
+    document.getElementById('editTypeDescription').value = description;
+    document.getElementById('editTypeActive').checked = isActive;
+    new bootstrap.Modal(document.getElementById('editTypeModal')).show();
+}
+
+async function updateType() {
+    const id = document.getElementById('editTypeId').value;
+    const data = {
+        type_name: document.getElementById('editTypeName').value,
+        type_code: document.getElementById('editTypeCode').value.toUpperCase(),
+        description: document.getElementById('editTypeDescription').value,
+        is_active: document.getElementById('editTypeActive').checked
+    };
+    
+    try {
+        const response = await fetch('/api/v1/insurance-types/' + id + '/', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + JSON.stringify(error));
+        }
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+async function toggleStatus(id, currentStatus) {
+    if (!confirm('Are you sure you want to ' + (currentStatus ? 'deactivate' : 'activate') + ' this insurance type?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/v1/insurance-types/' + id + '/', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'include',
+            body: JSON.stringify({ is_active: !currentStatus })
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + JSON.stringify(error));
+        }
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+</script>
+{% endblock %}

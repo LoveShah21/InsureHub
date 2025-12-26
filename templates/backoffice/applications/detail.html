@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Application - Backoffice{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'backoffice_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Review Application{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-text"></i> {{ application.application_number }}</span>
+                <span
+                    class="badge bg-{% if application.status == 'APPROVED' %}success{% elif application.status == 'REJECTED' %}danger{% elif application.status == 'SUBMITTED' %}primary{% elif application.status == 'UNDER_REVIEW' %}warning{% else %}secondary{% endif %} fs-6">
+                    {{ application.status }}
+                </span>
+            </div>
+            <div class="card-body">
+                <h5>Customer Information</h5>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Name</label>
+                        <p class="fw-bold mb-0">{{ application.customer.user.get_full_name|default:application.customer.user.email }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Email</label>
+                        <p class="fw-bold mb-0">{{ application.customer.user.email }}</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5>Application Details</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Insurance Type</label>
+                        <p class="fw-bold mb-0">{{ application.insurance_type.type_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Coverage Amount</label>
+                        <p class="fw-bold mb-0">₹{{ application.requested_coverage_amount|floatformat:0|default:"Not specified" }}</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Policy Tenure</label>
+                        <p class="fw-bold mb-0">{{ application.policy_tenure_months }} Months</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Submitted On</label>
+                        <p class="fw-bold mb-0">{{ application.submission_date|date:"F d, Y H:i"|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Panel -->
+        {% if application.status == 'SUBMITTED' or application.status == 'UNDER_REVIEW' %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-gear"></i> Actions
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if application.status == 'SUBMITTED' %}
+                    <button id="startReviewBtn" class="btn btn-warning">
+                        <i class="bi bi-eye"></i> Start Review
+                    </button>
+                    {% endif %}
+
+                    {% if application.status == 'UNDER_REVIEW' %}
+                    <button id="approveBtn" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Approve
+                    </button>
+                    <button id="rejectBtn" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="bi bi-x-circle"></i> Reject
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Timeline
+            </div>
+            <div class="card-body">
+                <div class="d-flex mb-3">
+                    <div class="rounded-circle bg-success text-white p-2 me-3">
+                        <i class="bi bi-check"></i>
+                    </div>
+                    <div>
+                        <strong>Created</strong>
+                        <p class="text-muted small mb-0">{{ application.created_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+
+                {% if application.submission_date %}
+                <div class="d-flex mb-3">
+                    <div class="rounded-circle bg-success text-white p-2 me-3">
+                        <i class="bi bi-check"></i>
+                    </div>
+                    <div>
+                        <strong>Submitted</strong>
+                        <p class="text-muted small mb-0">{{ application.submission_date|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if application.review_start_date %}
+                <div class="d-flex mb-3">
+                    <div class="rounded-circle bg-success text-white p-2 me-3">
+                        <i class="bi bi-check"></i>
+                    </div>
+                    <div>
+                        <strong>Review Started</strong>
+                        <p class="text-muted small mb-0">{{ application.review_start_date|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if application.approval_date %}
+                <div class="d-flex mb-3">
+                    <div class="rounded-circle bg-success text-white p-2 me-3">
+                        <i class="bi bi-check"></i>
+                    </div>
+                    <div>
+                        <strong>Approved</strong>
+                        <p class="text-muted small mb-0">{{ application.approval_date|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="{% url 'backoffice_applications' %}" class="btn btn-outline-secondary w-100">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Application</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="rejectReason" class="form-label">Rejection Reason *</label>
+                    <textarea class="form-control" id="rejectReason" rows="3" required
+                        placeholder="Please provide a reason for rejection..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmRejectBtn" class="btn btn-danger">Confirm Rejection</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function updateStatus(action, reason = '') {
+        try {
+            const response = await fetch('/api/v1/applications/{{ application.id }}/update-status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ action: action, reason: reason })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || JSON.stringify(error)));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    }
+
+    document.getElementById('startReviewBtn')?.addEventListener('click', () => updateStatus('start_review'));
+    document.getElementById('approveBtn')?.addEventListener('click', () => {
+        if (confirm('Approve this application?')) {
+            updateStatus('approve');
+        }
+    });
+    document.getElementById('confirmRejectBtn')?.addEventListener('click', () => {
+        const reason = document.getElementById('rejectReason').value;
+        if (!reason.trim()) {
+            alert('Please provide a rejection reason.');
+            return;
+        }
+        updateStatus('reject', reason);
+    });
+</script>
+{% endblock %}

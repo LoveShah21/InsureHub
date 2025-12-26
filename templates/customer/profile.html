@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'policy_explore' %}">
+        <i class="bi bi-search"></i> Explore
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-person-circle"></i> Profile Information
+            </div>
+            <div class="card-body">
+                <form id="profileForm" method="post">
+                    {% csrf_token %}
+
+                    <h5 class="mb-3">Personal Information</h5>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name"
+                                value="{{ user.first_name }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name"
+                                value="{{ user.last_name }}">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" value="{{ user.email }}" disabled>
+                            <div class="form-text">Email cannot be changed</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone" name="phone_number"
+                                value="{{ user.phone_number|default:'' }}">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">Additional Details</h5>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="dob" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="dob" name="date_of_birth"
+                                value="{{ profile.date_of_birth|date:'Y-m-d'|default:'' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="gender" class="form-label">Gender</label>
+                            <select class="form-select" id="gender" name="gender">
+                                <option value="">Select</option>
+                                <option value="MALE" {% if profile.gender == 'MALE' %}selected{% endif %}>Male</option>
+                                <option value="FEMALE" {% if profile.gender == 'FEMALE' %}selected{% endif %}>Female</option>
+                                <option value="OTHER" {% if profile.gender == 'OTHER' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="marital_status" class="form-label">Marital Status</label>
+                            <select class="form-select" id="marital_status" name="marital_status">
+                                <option value="">Select</option>
+                                <option value="SINGLE" {% if profile.marital_status == 'SINGLE' %}selected{% endif %}>Single</option>
+                                <option value="MARRIED" {% if profile.marital_status == 'MARRIED' %}selected{% endif %}>Married</option>
+                                <option value="DIVORCED" {% if profile.marital_status == 'DIVORCED' %}selected{% endif %}>Divorced</option>
+                                <option value="WIDOWED" {% if profile.marital_status == 'WIDOWED' %}selected{% endif %}>Widowed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="occupation" class="form-label">Occupation Type</label>
+                            <select class="form-select" id="occupation" name="occupation_type">
+                                <option value="">Select</option>
+                                <option value="SALARIED" {% if profile.occupation_type == 'SALARIED' %}selected{% endif %}>Salaried</option>
+                                <option value="SELF_EMPLOYED" {% if profile.occupation_type == 'SELF_EMPLOYED' %}selected{% endif %}>Self Employed</option>
+                                <option value="STUDENT" {% if profile.occupation_type == 'STUDENT' %}selected{% endif %}>Student</option>
+                                <option value="RETIRED" {% if profile.occupation_type == 'RETIRED' %}selected{% endif %}>Retired</option>
+                                <option value="UNEMPLOYED" {% if profile.occupation_type == 'UNEMPLOYED' %}selected{% endif %}>Unemployed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Residential Address</label>
+                        <textarea class="form-control" id="address" name="residential_address"
+                            rows="2">{{ profile.residential_address|default:'' }}</textarea>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="city" name="residential_city"
+                                value="{{ profile.residential_city|default:'' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="state" class="form-label">State</label>
+                            <input type="text" class="form-control" id="state" name="residential_state"
+                                value="{{ profile.residential_state|default:'' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="pincode" class="form-label">Pincode</label>
+                            <input type="text" class="form-control" id="pincode" name="residential_pincode"
+                                value="{{ profile.residential_pincode|default:'' }}">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-save"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-shield-lock"></i> Account Status
+            </div>
+            <div class="card-body text-center">
+                <i class="bi bi-person-check text-success" style="font-size: 4rem;"></i>
+                <h5 class="mt-3">Verified Account</h5>
+                <p class="text-muted small">Member since {{ user.date_joined|date:"M Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('profileForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = {};
+
+        formData.forEach((value, key) => {
+            if (value && key !== 'csrfmiddlewaretoken') {
+                data[key] = value;
+            }
+        });
+
+        try {
+            const response = await fetch('/api/v1/profile/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                },
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                alert('Profile updated successfully!');
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + JSON.stringify(error));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    });
+</script>
+{% endblock %}

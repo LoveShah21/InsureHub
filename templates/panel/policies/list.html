@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Policies - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-grid"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_companies' %}">
+        <i class="bi bi-building"></i> Companies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_payments' %}">
+        <i class="bi bi-credit-card"></i> Payments
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}All Policies{% endblock %}
+
+{% block content %}
+<!-- Search Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Search by policy number, customer, type..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    <option value="ACTIVE" {% if request.GET.status == 'ACTIVE' %}selected{% endif %}>Active</option>
+                    <option value="EXPIRED" {% if request.GET.status == 'EXPIRED' %}selected{% endif %}>Expired</option>
+                    <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                    <option value="LAPSED" {% if request.GET.status == 'LAPSED' %}selected{% endif %}>Lapsed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Issued Policies</span>
+        <small class="text-muted">{{ policies|length }} result(s)</small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Policy #</th>
+                        <th>Customer</th>
+                        <th>Company</th>
+                        <th>Sum Insured</th>
+                        <th>Premium</th>
+                        <th>Status</th>
+                        <th>Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for policy in policies %}
+                    <tr>
+                        <td>{{ policy.policy_number }}</td>
+                        <td>{{ policy.customer.user.get_full_name|default:policy.customer.user.email }}</td>
+                        <td>{{ policy.insurance_company.company_name }}</td>
+                        <td>₹{{ policy.sum_insured|floatformat:0 }}</td>
+                        <td>₹{{ policy.total_premium_with_gst|floatformat:2 }}</td>
+                        <td>
+                            <span
+                                class="badge bg-{% if policy.status == 'ACTIVE' %}success{% elif policy.status == 'EXPIRED' %}danger{% else %}secondary{% endif %}">
+                                {{ policy.status }}
+                            </span>
+                        </td>
+                        <td>{{ policy.issued_at|date:"M d, Y"|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">No policies found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

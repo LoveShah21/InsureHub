@@ -52,14 +52,38 @@ class InsuranceApplicationViewSet(viewsets.ModelViewSet):
         
         # Backoffice sees all applications
         if user.user_roles.filter(role__role_name__in=['ADMIN', 'BACKOFFICE']).exists():
-            return InsuranceApplication.objects.select_related(
+            queryset = InsuranceApplication.objects.select_related(
                 'customer__user', 'insurance_type'
             ).prefetch_related('documents').all()
+        else:
+            # Customers see only their own
+            queryset = InsuranceApplication.objects.select_related(
+                'customer__user', 'insurance_type'
+            ).prefetch_related('documents').filter(customer__user=user)
         
-        # Customers see only their own
-        return InsuranceApplication.objects.select_related(
-            'customer__user', 'insurance_type'
-        ).prefetch_related('documents').filter(customer__user=user)
+        # Search functionality
+        from django.db.models import Q
+        search_query = self.request.query_params.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(application_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(customer__user__first_name__icontains=search_query) |
+                Q(customer__user__last_name__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query)
+            )
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status__iexact=status_filter)
+        
+        # Filter by insurance type
+        insurance_type = self.request.query_params.get('insurance_type')
+        if insurance_type:
+            queryset = queryset.filter(insurance_type_id=insurance_type)
+        
+        return queryset.distinct()
     
     def get_serializer_class(self):
         if self.action == 'create':

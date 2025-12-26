@@ -35,6 +35,8 @@ urlpatterns = [
     path('customer/claims/new/', views.CustomerClaimCreateView.as_view(), name='customer_claim_create'),
     path('customer/claims/<int:pk>/', views.CustomerClaimDetailView.as_view(), name='customer_claim_detail'),
     path('customer/profile/', views.CustomerProfileView.as_view(), name='customer_profile'),
+    path('customer/explore/', views.PolicyExploreView.as_view(), name='policy_explore'),
+    path('customer/insurance/<int:pk>/', views.InsuranceTypeDetailView.as_view(), name='insurance_type_detail'),
     
     # Backoffice Dashboard
     path('backoffice/dashboard/', views.BackofficeDashboardView.as_view(), name='backoffice_dashboard'),

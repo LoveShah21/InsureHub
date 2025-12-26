@@ -50,14 +50,44 @@ class PolicyViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Backoffice sees all
         if user.user_roles.filter(role__role_name__in=['ADMIN', 'BACKOFFICE']).exists():
-            return Policy.objects.select_related(
+            queryset = Policy.objects.select_related(
                 'customer__user', 'insurance_type', 'insurance_company'
             ).all()
+        else:
+            # Customers see only their own
+            queryset = Policy.objects.select_related(
+                'customer__user', 'insurance_type', 'insurance_company'
+            ).filter(customer__user=user)
         
-        # Customers see only their own
-        return Policy.objects.select_related(
-            'customer__user', 'insurance_type', 'insurance_company'
-        ).filter(customer__user=user)
+        # Search functionality
+        from django.db.models import Q
+        search_query = self.request.query_params.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(policy_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(customer__user__first_name__icontains=search_query) |
+                Q(customer__user__last_name__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query) |
+                Q(insurance_company__company_name__icontains=search_query)
+            )
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status__iexact=status_filter)
+        
+        # Filter by insurance type
+        insurance_type = self.request.query_params.get('insurance_type')
+        if insurance_type:
+            queryset = queryset.filter(insurance_type_id=insurance_type)
+        
+        # Filter by company
+        company = self.request.query_params.get('company')
+        if company:
+            queryset = queryset.filter(insurance_company_id=company)
+        
+        return queryset.distinct()
     
     def get_serializer_class(self):
         if self.action == 'list':

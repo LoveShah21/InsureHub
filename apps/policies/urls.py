@@ -24,9 +24,10 @@ router.register(r'payments', PaymentViewSet, basename='payment')
 router.register(r'invoices', InvoiceViewSet, basename='invoice')
 
 urlpatterns = [
-    path('', include(router.urls)),
-    
-    # Razorpay payment endpoints
+    # Razorpay payment endpoints (MUST be BEFORE router URLs to take precedence)
     path('payments/create-order/', create_razorpay_order, name='create_razorpay_order'),
     path('payments/verify/', verify_razorpay_payment, name='verify_razorpay_payment'),
+    
+    # Router URLs (policies, payments list, invoices)
+    path('', include(router.urls)),
 ]

@@ -16,7 +16,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from django.utils import timezone
 
 from apps.accounts.mixins import (
@@ -142,13 +142,31 @@ class CustomerDashboardView(CustomerRequiredMixin, TemplateView):
 
 
 class CustomerApplicationListView(CustomerRequiredMixin, ListView):
-    """List customer's applications."""
+    """List customer's applications with search support."""
     template_name = 'customer/applications/list.html'
     context_object_name = 'applications'
     
     def get_queryset(self):
+        from django.db.models import Q
         customer = CustomerProfile.objects.get(user=self.request.user)
-        return InsuranceApplication.objects.filter(customer=customer).order_by('-created_at')
+        queryset = InsuranceApplication.objects.filter(
+            customer=customer
+        ).select_related('insurance_type').order_by('-created_at')
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(application_number__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query)
+            )
+        
+        # Filter by status
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        return queryset
 
 
 class CustomerApplicationCreateView(CustomerRequiredMixin, TemplateView):
@@ -276,6 +294,48 @@ class CustomerProfileView(CustomerRequiredMixin, TemplateView):
         return context
 
 
+class PolicyExploreView(CustomerRequiredMixin, TemplateView):
+    """Policy marketplace/discovery page."""
+    template_name = 'customer/explore.html'
+
+
+class InsuranceTypeDetailView(CustomerRequiredMixin, TemplateView):
+    """Insurance type detail page with full info."""
+    template_name = 'customer/insurance_detail.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        insurance_type = InsuranceType.objects.prefetch_related(
+            'coverage_types', 'addons'
+        ).get(pk=self.kwargs['pk'])
+        
+        context['insurance_type'] = insurance_type
+        context['coverages'] = insurance_type.coverage_types.all()
+        context['addons'] = insurance_type.addons.all()
+        
+        # Get premium range from coverages
+        premiums = [c.base_premium_per_unit for c in context['coverages'] if c.base_premium_per_unit]
+        context['premium_range'] = {
+            'min': min(premiums) if premiums else 0,
+            'max': max(premiums) if premiums else 0,
+        }
+        
+        # Get active companies
+        context['companies'] = InsuranceCompany.objects.filter(is_active=True)
+        
+        # Icon mapping
+        icon_map = {
+            'MOTOR': 'car-front',
+            'HEALTH': 'heart-pulse',
+            'TRAVEL': 'airplane',
+            'WC': 'briefcase',
+            'CPM': 'building',
+        }
+        context['icon_name'] = icon_map.get(insurance_type.type_code, 'shield')
+        
+        return context
+
+
 # ============== Backoffice Dashboard ==============
 
 class BackofficeDashboardView(BackofficeRequiredMixin, TemplateView):
@@ -302,17 +362,34 @@ class BackofficeDashboardView(BackofficeRequiredMixin, TemplateView):
 
 
 class BackofficeApplicationListView(BackofficeRequiredMixin, ListView):
-    """List all applications for review."""
+    """List all applications for review with search support."""
     template_name = 'backoffice/applications/list.html'
     context_object_name = 'applications'
     paginate_by = 20
     
     def get_queryset(self):
+        from django.db.models import Q
+        queryset = InsuranceApplication.objects.select_related(
+            'customer__user', 'insurance_type'
+        ).order_by('-created_at')
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(application_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(customer__user__first_name__icontains=search_query) |
+                Q(customer__user__last_name__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query)
+            )
+        
+        # Filter by status
         status_filter = self.request.GET.get('status')
-        queryset = InsuranceApplication.objects.all().order_by('-created_at')
         if status_filter:
             queryset = queryset.filter(status=status_filter)
-        return queryset
+        
+        return queryset.distinct()
 
 
 class BackofficeApplicationDetailView(BackofficeRequiredMixin, DetailView):
@@ -366,13 +443,37 @@ class AdminDashboardView(AdminRequiredMixin, TemplateView):
 
 
 class AdminUserListView(AdminRequiredMixin, ListView):
-    """List all users."""
+    """List all users with search support."""
     template_name = 'panel/users/list.html'
     context_object_name = 'users'
     paginate_by = 20
     
     def get_queryset(self):
-        return User.objects.all().order_by('-date_joined')
+        from django.db.models import Q
+        queryset = User.objects.prefetch_related('user_roles__role').order_by('-date_joined')
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(email__icontains=search_query) |
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query)
+            )
+        
+        # Filter by role
+        role = self.request.GET.get('role')
+        if role:
+            queryset = queryset.filter(user_roles__role__role_name__iexact=role)
+        
+        # Filter by status
+        is_active = self.request.GET.get('is_active')
+        if is_active == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active == 'false':
+            queryset = queryset.filter(is_active=False)
+        
+        return queryset.distinct()
 
 
 class AdminUserDetailView(AdminRequiredMixin, DetailView):
@@ -389,41 +490,125 @@ class AdminUserDetailView(AdminRequiredMixin, DetailView):
 
 
 class AdminInsuranceTypeListView(AdminRequiredMixin, ListView):
-    """Manage insurance types."""
+    """Manage insurance types with search."""
     template_name = 'panel/catalog/types.html'
     context_object_name = 'types'
     
     def get_queryset(self):
-        return InsuranceType.objects.all()
+        queryset = InsuranceType.objects.prefetch_related('coverage_types').all()
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(type_name__icontains=search_query) |
+                Q(type_code__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+        
+        # Status filter
+        is_active = self.request.GET.get('is_active')
+        if is_active == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active == 'false':
+            queryset = queryset.filter(is_active=False)
+        
+        # Annotate with coverage count and premium range
+        types_with_data = []
+        for ins_type in queryset:
+            premiums = [c.base_premium_per_unit for c in ins_type.coverage_types.all() if c.base_premium_per_unit]
+            ins_type.min_premium = min(premiums) if premiums else 0
+            ins_type.max_premium = max(premiums) if premiums else 0
+            ins_type.coverage_count = ins_type.coverage_types.count()
+            types_with_data.append(ins_type)
+        
+        return types_with_data
 
 
 class AdminCompanyListView(AdminRequiredMixin, ListView):
-    """Manage insurance companies."""
+    """Manage insurance companies with search."""
     template_name = 'panel/catalog/companies.html'
     context_object_name = 'companies'
     
     def get_queryset(self):
-        return InsuranceCompany.objects.all()
+        queryset = InsuranceCompany.objects.all()
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(company_name__icontains=search_query) |
+                Q(company_code__icontains=search_query) |
+                Q(registration_number__icontains=search_query)
+            )
+        
+        # Status filter
+        is_active = self.request.GET.get('is_active')
+        if is_active == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active == 'false':
+            queryset = queryset.filter(is_active=False)
+        
+        # Rating filter
+        min_rating = self.request.GET.get('min_rating')
+        if min_rating:
+            queryset = queryset.filter(service_rating__gte=float(min_rating))
+        
+        return queryset
 
 
 class AdminPolicyListView(AdminRequiredMixin, ListView):
-    """View all policies (read-only)."""
+    """View all policies with search."""
     template_name = 'panel/policies/list.html'
     context_object_name = 'policies'
     paginate_by = 20
     
     def get_queryset(self):
-        return Policy.objects.all().order_by('-created_at')
+        queryset = Policy.objects.select_related('customer__user', 'insurance_type', 'insurance_company').all()
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(policy_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query) |
+                Q(insurance_company__company_name__icontains=search_query)
+            )
+        
+        # Status filter
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        return queryset.order_by('-created_at')
 
 
 class AdminPaymentListView(AdminRequiredMixin, ListView):
-    """View all payments (read-only)."""
+    """View all payments with search."""
     template_name = 'panel/payments/list.html'
     context_object_name = 'payments'
     paginate_by = 20
     
     def get_queryset(self):
-        return Payment.objects.all().order_by('-created_at')
+        queryset = Payment.objects.select_related('quote__application__customer__user').all()
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(razorpay_order_id__icontains=search_query) |
+                Q(razorpay_payment_id__icontains=search_query) |
+                Q(quote__quote_number__icontains=search_query) |
+                Q(quote__application__customer__user__email__icontains=search_query)
+            )
+        
+        # Status filter
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        return queryset.order_by('-created_at')
 
 
 # ============== Payment Callbacks ==============

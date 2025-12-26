@@ -1,0 +1,12 @@
+{
+    // Disable format on save for HTML files (Django templates)
+    "[html]": {
+        "editor.formatOnSave": false,
+        "editor.formatOnPaste": false
+    },
+    // Disable format on save for Django HTML files
+    "[django-html]": {
+        "editor.formatOnSave": false,
+        "editor.formatOnPaste": false
+    }
+}

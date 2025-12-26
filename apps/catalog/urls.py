@@ -10,6 +10,7 @@ from .views import (
     InsuranceCompanyViewSet,
     CoverageTypeViewSet,
     RiderAddonViewSet,
+    PolicyExploreView,
 )
 
 router = DefaultRouter()
@@ -19,5 +20,7 @@ router.register(r'coverages', CoverageTypeViewSet, basename='coverage')
 router.register(r'addons', RiderAddonViewSet, basename='addon')
 
 urlpatterns = [
+    # Policy explore/marketplace endpoint
+    path('policies/explore/', PolicyExploreView.as_view(), name='policy-explore'),
     path('', include(router.urls)),
 ]

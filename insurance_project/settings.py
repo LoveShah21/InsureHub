@@ -216,6 +216,18 @@ CORS_ALLOW_CREDENTIALS = True
 
 
 # =============================================================================
+# SESSION CONFIGURATION
+# =============================================================================
+
+# Session cookie settings for persistent login across tabs
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_COOKIE_SAMESITE = 'Lax'  # Allow cross-site cookie for subdomains
+SESSION_SAVE_EVERY_REQUEST = True  # Reset session expiry on every request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session after browser close
+
+
+# =============================================================================
 # INTERNATIONALIZATION
 # =============================================================================
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

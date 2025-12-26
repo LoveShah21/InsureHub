@@ -78,7 +78,7 @@
                         class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                         <div>
                             <strong>{{ claim.claim_number }}</strong>
-                            <br><small class="text-muted">₹{{ claim.amount_requested|floatformat:0 }}</small>
+                            <br><small class="text-muted">₹{{ claim.claim_amount|floatformat:0 }}</small>
                         </div>
                         <span class="badge bg-warning">{{ claim.status }}</span>
                     </a>

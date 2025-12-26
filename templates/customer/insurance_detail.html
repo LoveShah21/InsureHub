@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ insurance_type.type_name }} - InsureHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+        color: white;
+        padding: 3rem 2rem;
+        border-radius: 1rem;
+        margin-bottom: 2rem;
+    }
+    .feature-card {
+        border-left: 4px solid #0d6efd;
+        transition: transform 0.2s;
+    }
+    .feature-card:hover {
+        transform: translateX(5px);
+    }
+    .company-card {
+        transition: box-shadow 0.2s;
+    }
+    .company-card:hover {
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .rating-stars {
+        color: #ffc107;
+    }
+    .apply-cta {
+        position: sticky;
+        bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'policy_explore' %}">
+        <i class="bi bi-search"></i> Explore
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}{{ insurance_type.type_name }}{% endblock %}
+
+{% block topbar_right %}
+<a href="{% url 'policy_explore' %}" class="btn btn-outline-primary me-2">
+    <i class="bi bi-arrow-left"></i> Back to Explore
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="d-flex align-items-center mb-3">
+        <i class="bi bi-{{ icon_name }} fs-1 me-3"></i>
+        <div>
+            <h2 class="mb-1">{{ insurance_type.type_name }}</h2>
+            <span class="badge bg-light text-dark">{{ insurance_type.type_code }}</span>
+        </div>
+    </div>
+    <p class="mb-0">{{ insurance_type.description }}</p>
+</div>
+
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Coverages Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-check-circle"></i> Available Coverages
+            </div>
+            <div class="card-body">
+                {% if coverages %}
+                    {% for coverage in coverages %}
+                    <div class="feature-card p-3 bg-light rounded mb-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">
+                                    {{ coverage.coverage_name }}
+                                    {% if coverage.is_mandatory %}
+                                    <span class="badge bg-danger ms-2">Mandatory</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-2">Optional</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="text-muted small mb-0">{{ coverage.description|default:"Coverage protection included in this plan." }}</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="text-primary fw-bold">₹{{ coverage.base_premium_per_unit|floatformat:0 }}</span>
+                                <br><small class="text-muted">{{ coverage.unit_of_measurement|default:"per policy" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">Contact us for coverage details.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Add-ons Section -->
+        {% if addons %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-plus-circle"></i> Optional Add-ons & Riders
+            </div>
+            <div class="card-body">
+                {% for addon in addons %}
+                <div class="feature-card p-3 bg-light rounded mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ addon.addon_name }}</h6>
+                            <p class="text-muted small mb-0">{{ addon.description|default:"Additional protection for enhanced coverage." }}</p>
+                        </div>
+                        <div class="text-end">
+                            <span class="text-success fw-bold">+{{ addon.premium_percentage|floatformat:1 }}%</span>
+                            <br><small class="text-muted">of base premium</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Premium Range -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-currency-rupee"></i> Premium Range
+            </div>
+            <div class="card-body text-center">
+                <h3 class="text-primary mb-0">
+                    ₹{{ premium_range.min|floatformat:0 }} - ₹{{ premium_range.max|floatformat:0 }}
+                </h3>
+                <small class="text-muted">per year (approx.)</small>
+                <hr>
+                <p class="small text-muted mb-0">Final premium calculated based on coverage selection, tenure, and risk assessment.</p>
+            </div>
+        </div>
+
+        <!-- Companies -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-building"></i> Partner Companies
+            </div>
+            <div class="card-body">
+                {% if companies %}
+                    {% for company in companies %}
+                    <div class="company-card p-2 border rounded mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>{{ company.company_name }}</strong>
+                            <div>
+                                <span class="rating-stars">
+                                    <i class="bi bi-star-fill"></i>
+                                </span>
+                                <span class="small">{{ company.service_rating|floatformat:1 }}</span>
+                            </div>
+                        </div>
+                        <small class="text-muted">Claim Settlement: {{ company.claim_settlement_ratio|floatformat:0 }}%</small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">Multiple top-rated companies available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Apply CTA -->
+        <div class="card apply-cta bg-primary text-white">
+            <div class="card-body text-center">
+                <h5 class="mb-3">Ready to Get Covered?</h5>
+                <p class="small mb-3">Start your application and get personalized quotes from multiple companies.</p>
+                <a href="{% url 'customer_application_create' %}?type={{ insurance_type.id }}" class="btn btn-light btn-lg w-100">
+                    <i class="bi bi-arrow-right-circle"></i> Apply Now
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
