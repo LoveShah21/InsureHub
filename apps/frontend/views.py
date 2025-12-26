@@ -285,12 +285,32 @@ class CustomerClaimDetailView(CustomerRequiredMixin, DetailView):
 
 
 class CustomerProfileView(CustomerRequiredMixin, TemplateView):
-    """View/edit customer profile."""
+    """View/edit customer profile with risk data."""
     template_name = 'customer/profile.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['profile'] = CustomerProfile.objects.get(user=self.request.user)
+        profile = CustomerProfile.objects.get(user=self.request.user)
+        context['profile'] = profile
+        
+        # Medical disclosure for health insurance
+        from apps.customers.models import CustomerMedicalDisclosure, CustomerDrivingHistory, CustomerRiskProfile
+        context['medical_disclosures'] = CustomerMedicalDisclosure.objects.filter(
+            customer=profile
+        ).order_by('-disclosure_date')
+        
+        # Driving history for motor insurance
+        try:
+            context['driving_history'] = profile.driving_history
+        except CustomerDrivingHistory.DoesNotExist:
+            context['driving_history'] = None
+        
+        # Risk profile
+        try:
+            context['risk_profile'] = profile.risk_profile
+        except CustomerRiskProfile.DoesNotExist:
+            context['risk_profile'] = None
+        
         return context
 
 
@@ -393,10 +413,38 @@ class BackofficeApplicationListView(BackofficeRequiredMixin, ListView):
 
 
 class BackofficeApplicationDetailView(BackofficeRequiredMixin, DetailView):
-    """Review application details."""
+    """Review application details with documents, quotes, and risk info."""
     template_name = 'backoffice/applications/detail.html'
     context_object_name = 'application'
     model = InsuranceApplication
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        application = self.object
+        
+        # Documents
+        context['documents'] = ApplicationDocument.objects.filter(
+            application=application
+        ).order_by('-uploaded_at')
+        
+        # Quotes generated for this application
+        context['quotes'] = Quote.objects.filter(
+            application=application
+        ).select_related('insurance_company').order_by('-created_at')
+        
+        # Customer risk profile if available
+        try:
+            context['risk_profile'] = application.customer.risk_profile
+        except:
+            context['risk_profile'] = None
+        
+        # Form data (from application fields)
+        context['form_data'] = application.form_data or {}
+        
+        # Insurance companies for quote generation
+        context['insurance_companies'] = InsuranceCompany.objects.filter(is_active=True)
+        
+        return context
 
 
 class BackofficeClaimListView(BackofficeRequiredMixin, ListView):
@@ -414,10 +462,44 @@ class BackofficeClaimListView(BackofficeRequiredMixin, ListView):
 
 
 class BackofficeClaimDetailView(BackofficeRequiredMixin, DetailView):
-    """Review claim details."""
+    """Review claim details with assessments, history, and settlement."""
     template_name = 'backoffice/claims/detail.html'
     context_object_name = 'claim'
     model = Claim
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        claim = self.object
+        
+        # Status history
+        from apps.claims.models import ClaimStatusHistory, ClaimAssessment, ClaimSettlement
+        context['status_history'] = ClaimStatusHistory.objects.filter(
+            claim=claim
+        ).order_by('-status_changed_at')
+        
+        # Assessments
+        context['assessments'] = ClaimAssessment.objects.filter(
+            claim=claim
+        ).select_related('surveyor').order_by('-created_at')
+        
+        # Settlement
+        try:
+            context['settlement'] = claim.settlement
+        except ClaimSettlement.DoesNotExist:
+            context['settlement'] = None
+        
+        # Available surveyors (users with SURVEYOR role)
+        context['surveyors'] = User.objects.filter(
+            user_roles__role__role_name='SURVEYOR',
+            is_active=True
+        ).distinct()
+        
+        # SLA status using service
+        from apps.claims.services import ClaimsWorkflowService
+        service = ClaimsWorkflowService(claim)
+        context['sla_status'] = service.get_sla_status()
+        
+        return context
 
 
 # ============== Custom Admin Panel ==============
@@ -609,6 +691,191 @@ class AdminPaymentListView(AdminRequiredMixin, ListView):
             queryset = queryset.filter(status=status)
         
         return queryset.order_by('-created_at')
+
+
+# ============== Admin Configuration Management ==============
+
+class AdminPremiumSlabListView(AdminRequiredMixin, ListView):
+    """Manage premium slabs by insurance type."""
+    template_name = 'panel/config/premium_slabs.html'
+    context_object_name = 'slabs'
+    
+    def get_queryset(self):
+        from apps.catalog.models import PremiumSlab
+        queryset = PremiumSlab.objects.select_related('insurance_type').order_by(
+            'insurance_type', 'min_coverage_amount'
+        )
+        
+        # Filter by insurance type
+        type_id = self.request.GET.get('type')
+        if type_id:
+            queryset = queryset.filter(insurance_type_id=type_id)
+        
+        # Filter by status
+        is_active = self.request.GET.get('is_active')
+        if is_active == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active == 'false':
+            queryset = queryset.filter(is_active=False)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        return context
+
+
+class AdminDiscountRuleListView(AdminRequiredMixin, ListView):
+    """Manage discount rules."""
+    template_name = 'panel/config/discount_rules.html'
+    context_object_name = 'rules'
+    
+    def get_queryset(self):
+        from apps.catalog.models import DiscountRule
+        queryset = DiscountRule.objects.select_related('insurance_type').order_by(
+            '-rule_priority', 'rule_name'
+        )
+        
+        # Filter by insurance type
+        type_id = self.request.GET.get('type')
+        if type_id:
+            queryset = queryset.filter(insurance_type_id=type_id)
+        
+        # Search
+        search = self.request.GET.get('q', '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(rule_name__icontains=search) |
+                Q(rule_code__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        return context
+
+
+class AdminBusinessConfigListView(AdminRequiredMixin, ListView):
+    """Manage system-wide configuration."""
+    template_name = 'panel/config/business_config.html'
+    context_object_name = 'configs'
+    
+    def get_queryset(self):
+        from apps.catalog.models import BusinessConfiguration
+        queryset = BusinessConfiguration.objects.order_by('config_type', 'config_key')
+        
+        # Filter by type
+        config_type = self.request.GET.get('type')
+        if config_type:
+            queryset = queryset.filter(config_type=config_type)
+        
+        # Search
+        search = self.request.GET.get('q', '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(config_key__icontains=search) |
+                Q(config_description__icontains=search)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.catalog.models import BusinessConfiguration
+        context['config_types'] = BusinessConfiguration.CONFIG_TYPE_CHOICES
+        return context
+
+
+class AdminEligibilityRuleListView(AdminRequiredMixin, ListView):
+    """Manage policy eligibility rules."""
+    template_name = 'panel/config/eligibility_rules.html'
+    context_object_name = 'rules'
+    
+    def get_queryset(self):
+        from apps.catalog.models import PolicyEligibilityRule
+        queryset = PolicyEligibilityRule.objects.select_related('insurance_type').order_by(
+            'insurance_type', '-rule_priority'
+        )
+        
+        # Filter by insurance type
+        type_id = self.request.GET.get('type')
+        if type_id:
+            queryset = queryset.filter(insurance_type_id=type_id)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        return context
+
+
+class AdminClaimThresholdListView(AdminRequiredMixin, ListView):
+    """Manage claim approval thresholds."""
+    template_name = 'panel/config/claim_thresholds.html'
+    context_object_name = 'thresholds'
+    
+    def get_queryset(self):
+        from apps.catalog.models import ClaimApprovalThreshold
+        return ClaimApprovalThreshold.objects.select_related(
+            'insurance_type', 'required_approver_role'
+        ).order_by('insurance_type', 'min_claim_amount')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        context['roles'] = Role.objects.all()
+        return context
+
+
+class AdminAnalyticsDashboardView(AdminRequiredMixin, TemplateView):
+    """Analytics dashboard with charts and metrics."""
+    template_name = 'panel/analytics/dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from datetime import date, timedelta
+        
+        today = date.today()
+        thirty_days_ago = today - timedelta(days=30)
+        
+        # Policy stats
+        context['total_policies'] = Policy.objects.count()
+        context['active_policies'] = Policy.objects.filter(status='ACTIVE').count()
+        context['policies_this_month'] = Policy.objects.filter(
+            created_at__date__gte=thirty_days_ago
+        ).count()
+        
+        # Claim stats
+        context['total_claims'] = Claim.objects.count()
+        context['pending_claims'] = Claim.objects.filter(
+            status__in=['SUBMITTED', 'UNDER_REVIEW']
+        ).count()
+        context['approved_claims'] = Claim.objects.filter(status='APPROVED').count()
+        context['settled_claims'] = Claim.objects.filter(status='SETTLED').count()
+        
+        # Financial
+        context['total_premium'] = Policy.objects.filter(
+            status='ACTIVE'
+        ).aggregate(total=Sum('total_premium_with_gst'))['total'] or 0
+        
+        context['total_claims_paid'] = Claim.objects.filter(
+            status='SETTLED'
+        ).aggregate(total=Sum('amount_settled'))['total'] or 0
+        
+        # Recent activity
+        context['recent_policies'] = Policy.objects.order_by('-created_at')[:5]
+        context['recent_claims'] = Claim.objects.order_by('-created_at')[:5]
+        
+        # By insurance type
+        context['policies_by_type'] = Policy.objects.values(
+            'insurance_type__type_name'
+        ).annotate(count=Count('id')).order_by('-count')[:5]
+        
+        return context
 
 
 # ============== Payment Callbacks ==============

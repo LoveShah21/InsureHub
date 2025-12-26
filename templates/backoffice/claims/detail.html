@@ -25,21 +25,27 @@
 {% block content %}
 <div class="row">
     <div class="col-lg-8">
+        <!-- Claim Header -->
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-clipboard-check"></i> {{ claim.claim_number }}</span>
-                <span
-                    class="badge bg-{% if claim.status == 'APPROVED' %}success{% elif claim.status == 'REJECTED' %}danger{% elif claim.status == 'SUBMITTED' %}primary{% elif claim.status == 'UNDER_REVIEW' %}warning{% elif claim.status == 'SETTLED' %}info{% else %}secondary{% endif %} fs-6">
-                    {{ claim.status }}
-                </span>
+                <div>
+                    <span class="badge bg-{% if claim.status == 'APPROVED' %}success{% elif claim.status == 'REJECTED' %}danger{% elif claim.status == 'SUBMITTED' %}primary{% elif claim.status == 'UNDER_REVIEW' %}warning{% elif claim.status == 'SETTLED' %}info{% else %}secondary{% endif %} fs-6">
+                        {{ claim.status }}
+                    </span>
+                    {% if sla_status.within_sla %}
+                    <span class="badge bg-success ms-2">Within SLA</span>
+                    {% else %}
+                    <span class="badge bg-danger ms-2">SLA Breached</span>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 <h5>Customer Information</h5>
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <label class="text-muted small">Name</label>
-                        <p class="fw-bold mb-0">{{ claim.customer.user.get_full_name|default:claim.customer.user.email
-                            }}</p>
+                        <p class="fw-bold mb-0">{{ claim.customer.user.get_full_name|default:claim.customer.user.email }}</p>
                     </div>
                     <div class="col-md-6">
                         <label class="text-muted small">Policy</label>
@@ -56,8 +62,8 @@
                         <p class="fw-bold mb-0">{{ claim.claim_type }}</p>
                     </div>
                     <div class="col-md-4">
-                        <label class="text-muted small">Claim Amount</label>
-                        <p class="fw-bold text-primary fs-4 mb-0">₹{{ claim.claim_amount|floatformat:0 }}</p>
+                        <label class="text-muted small">Amount Requested</label>
+                        <p class="fw-bold text-primary fs-4 mb-0">₹{{ claim.amount_requested|floatformat:0 }}</p>
                     </div>
                     <div class="col-md-4">
                         <label class="text-muted small">Incident Date</label>
@@ -69,8 +75,70 @@
                     <label class="text-muted small">Description</label>
                     <p class="mb-0">{{ claim.description }}</p>
                 </div>
+                
+                {% if claim.amount_approved %}
+                <div class="alert alert-success">
+                    <strong>Approved Amount:</strong> ₹{{ claim.amount_approved|floatformat:0 }}
+                </div>
+                {% endif %}
             </div>
         </div>
+
+        <!-- Assessments Section -->
+        {% if assessments %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-search"></i> Surveyor Assessments
+            </div>
+            <div class="card-body">
+                {% for assessment in assessments %}
+                <div class="border rounded p-3 mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ assessment.surveyor.get_full_name|default:assessment.surveyor.email }}</strong>
+                        <span class="badge bg-{% if assessment.assessment_status == 'COMPLETED' %}success{% else %}warning{% endif %}">
+                            {{ assessment.assessment_status }}
+                        </span>
+                    </div>
+                    <small class="text-muted">{{ assessment.assessment_date|date:"M d, Y" }}</small>
+                    {% if assessment.damage_assessment %}
+                    <p class="mt-2 mb-1"><strong>Findings:</strong></p>
+                    <p class="mb-1">{{ assessment.damage_assessment }}</p>
+                    {% endif %}
+                    {% if assessment.loss_amount_assessed %}
+                    <p class="mb-0"><strong>Assessed Loss:</strong> ₹{{ assessment.loss_amount_assessed|floatformat:0 }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Settlement Section -->
+        {% if settlement %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-cash"></i> Settlement Details
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="text-muted small">Amount</label>
+                        <p class="fw-bold">₹{{ settlement.settlement_amount|floatformat:0 }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Method</label>
+                        <p class="fw-bold">{{ settlement.settlement_method }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small">Status</label>
+                        <span class="badge bg-{% if settlement.settlement_status == 'COMPLETED' %}success{% elif settlement.settlement_status == 'FAILED' %}danger{% else %}warning{% endif %}">
+                            {{ settlement.settlement_status }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Action Panel -->
         {% if claim.status == 'SUBMITTED' or claim.status == 'UNDER_REVIEW' %}
@@ -87,8 +155,10 @@
                     {% endif %}
 
                     {% if claim.status == 'UNDER_REVIEW' %}
-                    <button id="approveBtn" class="btn btn-success" data-bs-toggle="modal"
-                        data-bs-target="#approveModal">
+                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#assignSurveyorModal">
+                        <i class="bi bi-person-plus"></i> Assign Surveyor
+                    </button>
+                    <button id="approveBtn" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveModal">
                         <i class="bi bi-check-circle"></i> Approve
                     </button>
                     <button id="rejectBtn" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
@@ -102,6 +172,28 @@
     </div>
 
     <div class="col-lg-4">
+        <!-- SLA Status -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-clock"></i> SLA Status
+            </div>
+            <div class="card-body text-center">
+                {% if sla_status.status == 'COMPLETED' %}
+                <p class="mb-0">Processed in <strong>{{ sla_status.processing_days }}</strong> days</p>
+                {% else %}
+                <h3 class="{% if sla_status.within_sla %}text-success{% else %}text-danger{% endif %}">
+                    {% if sla_status.within_sla %}
+                    {{ sla_status.days_remaining }} days left
+                    {% else %}
+                    {{ sla_status.days_elapsed|add:"-"|add:sla_status.sla_days }} days overdue
+                    {% endif %}
+                </h3>
+                <small class="text-muted">SLA: {{ sla_status.sla_days }} days</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Policy Info -->
         <div class="card mb-3">
             <div class="card-header">
                 <i class="bi bi-shield-check"></i> Policy Info
@@ -111,17 +203,69 @@
                 <p class="mb-1"><strong>Type:</strong> {{ claim.policy.insurance_type.type_name }}</p>
                 <p class="mb-1"><strong>Sum Insured:</strong> ₹{{ claim.policy.sum_insured|floatformat:0 }}</p>
                 <p class="mb-0"><strong>Status:</strong>
-                    <span
-                        class="badge bg-{% if claim.policy.status == 'ACTIVE' %}success{% else %}secondary{% endif %}">
+                    <span class="badge bg-{% if claim.policy.status == 'ACTIVE' %}success{% else %}secondary{% endif %}">
                         {{ claim.policy.status }}
                     </span>
                 </p>
             </div>
         </div>
 
+        <!-- Status History -->
+        {% if status_history %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Status History
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for h in status_history %}
+                    <li class="list-group-item small">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ h.new_status }}</strong>
+                            <span class="text-muted">{{ h.status_changed_at|date:"M d, H:i" }}</span>
+                        </div>
+                        {% if h.status_change_reason %}
+                        <small class="text-muted">{{ h.status_change_reason|truncatechars:50 }}</small>
+                        {% endif %}
+                        <br><small>by {{ h.changed_by.email|truncatechars:20 }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
         <a href="{% url 'backoffice_claims' %}" class="btn btn-outline-secondary w-100">
             <i class="bi bi-arrow-left"></i> Back to List
         </a>
+    </div>
+</div>
+
+<!-- Assign Surveyor Modal -->
+<div class="modal fade" id="assignSurveyorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Surveyor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="surveyorSelect" class="form-label">Select Surveyor</label>
+                    <select class="form-select" id="surveyorSelect">
+                        {% for surveyor in surveyors %}
+                        <option value="{{ surveyor.id }}">{{ surveyor.get_full_name|default:surveyor.email }}</option>
+                        {% empty %}
+                        <option disabled>No surveyors available</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmAssignBtn" class="btn btn-primary">Assign</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -137,7 +281,8 @@
                 <div class="mb-3">
                     <label for="approvedAmount" class="form-label">Approved Amount (₹) *</label>
                     <input type="number" class="form-control" id="approvedAmount" required
-                        value="{{ claim.claim_amount }}" min="1">
+                        value="{{ claim.amount_requested }}" min="1" max="{{ claim.amount_requested }}">
+                    <small class="text-muted">Maximum: ₹{{ claim.amount_requested|floatformat:0 }}</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -196,7 +341,33 @@
         }
     }
 
+    async function assignSurveyor() {
+        const surveyorId = document.getElementById('surveyorSelect').value;
+        try {
+            const response = await fetch('/api/v1/claims/{{ claim.id }}/assign-surveyor/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ surveyor_id: parseInt(surveyorId) })
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || JSON.stringify(error)));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    }
+
     document.getElementById('startReviewBtn')?.addEventListener('click', () => updateClaimStatus('start_review'));
+
+    document.getElementById('confirmAssignBtn')?.addEventListener('click', assignSurveyor);
 
     document.getElementById('confirmApproveBtn')?.addEventListener('click', () => {
         const amount = document.getElementById('approvedAmount').value;

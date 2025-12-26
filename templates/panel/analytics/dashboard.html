@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics Dashboard - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_analytics' %}">
+        <i class="bi bi-graph-up"></i> Analytics
+    </a>
+</li>
+<li class="nav-item mt-3">
+    <small class="text-muted px-3">Configuration</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_premium_slabs' %}">
+        <i class="bi bi-sliders"></i> Premium Slabs
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_business_config' %}">
+        <i class="bi bi-gear"></i> System Config
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h6 class="card-title">Total Policies</h6>
+                <h2 class="mb-0">{{ total_policies }}</h2>
+                <small>{{ active_policies }} active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-title">Total Premium</h6>
+                <h2 class="mb-0">₹{{ total_premium|floatformat:0 }}</h2>
+                <small>Active policies</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h6 class="card-title">Pending Claims</h6>
+                <h2 class="mb-0">{{ pending_claims }}</h2>
+                <small>of {{ total_claims }} total</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6 class="card-title">Claims Paid</h6>
+                <h2 class="mb-0">₹{{ total_claims_paid|floatformat:0 }}</h2>
+                <small>{{ settled_claims }} settled</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Policies by Type -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-pie-chart"></i> Policies by Insurance Type
+            </div>
+            <div class="card-body">
+                {% if policies_by_type %}
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in policies_by_type %}
+                        <tr>
+                            <td>{{ item.insurance_type__type_name|default:"Unknown" }}</td>
+                            <td><span class="badge bg-primary">{{ item.count }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted text-center">No policy data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Claim Stats -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-graph-up"></i> Claims Summary
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Approved</span>
+                    <span class="badge bg-success">{{ approved_claims }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Pending</span>
+                    <span class="badge bg-warning text-dark">{{ pending_claims }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Settled</span>
+                    <span class="badge bg-info">{{ settled_claims }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Total</span>
+                    <span class="badge bg-secondary">{{ total_claims }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Recent Policies
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for policy in recent_policies %}
+                        <tr>
+                            <td><code>{{ policy.policy_number }}</code></td>
+                            <td>{{ policy.customer.user.email|truncatechars:20 }}</td>
+                            <td>₹{{ policy.total_premium_with_gst|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No recent policies</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-exclamation-triangle"></i> Recent Claims
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for claim in recent_claims %}
+                        <tr>
+                            <td><code>{{ claim.claim_number }}</code></td>
+                            <td>
+                                <span class="badge bg-{{ claim.status|lower }}">{{ claim.status }}</span>
+                            </td>
+                            <td>₹{{ claim.amount_requested|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No recent claims</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

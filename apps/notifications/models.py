@@ -185,3 +185,102 @@ class NotificationTemplate(models.Model):
                 'body_template': 'Dear {customer_name},\n\nYour policy {policy_number} will expire on {expiry_date}.\n\nPlease renew your policy to continue enjoying coverage.\n\nThank you for being a valued customer.'
             }
         ]
+
+
+class ScheduledReminder(models.Model):
+    """
+    Scheduled reminders for automated notifications.
+    
+    Used for:
+    - Policy expiry reminders
+    - Renewal reminders
+    - Payment due reminders
+    """
+    REMINDER_TYPE_CHOICES = [
+        ('POLICY_EXPIRY', 'Policy Expiry'),
+        ('RENEWAL_DUE', 'Renewal Due'),
+        ('PAYMENT_DUE', 'Payment Due'),
+        ('DOCUMENT_EXPIRY', 'Document Expiry'),
+        ('CUSTOM', 'Custom Reminder'),
+    ]
+    
+    REMINDER_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('SENT', 'Sent'),
+        ('CANCELLED', 'Cancelled'),
+        ('FAILED', 'Failed'),
+    ]
+    
+    reminder_type = models.CharField(
+        max_length=20, choices=REMINDER_TYPE_CHOICES, db_index=True
+    )
+    
+    # Related entity
+    related_entity_type = models.CharField(
+        max_length=50,
+        help_text="E.g., 'policy', 'payment'"
+    )
+    related_entity_id = models.PositiveIntegerField()
+    
+    # Template
+    template = models.ForeignKey(
+        NotificationTemplate, on_delete=models.RESTRICT,
+        related_name='scheduled_reminders'
+    )
+    
+    # Recipient
+    recipient_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='scheduled_reminders'
+    )
+    
+    # Schedule
+    reminder_scheduled_for = models.DateTimeField(db_index=True)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_status = models.CharField(
+        max_length=20, choices=REMINDER_STATUS_CHOICES, default='PENDING'
+    )
+    
+    # Recurrence (optional)
+    is_recurring = models.BooleanField(default=False)
+    recurrence_pattern = models.CharField(
+        max_length=100, blank=True,
+        help_text="E.g., 'daily', 'weekly', '30_days_before'"
+    )
+    
+    # Failure tracking
+    failure_reason = models.TextField(blank=True)
+    retry_count = models.PositiveIntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'scheduled_reminders'
+        ordering = ['reminder_scheduled_for']
+        indexes = [
+            models.Index(fields=['reminder_status', 'reminder_scheduled_for']),
+            models.Index(fields=['related_entity_type', 'related_entity_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.reminder_type}: {self.reminder_scheduled_for}"
+    
+    def mark_sent(self):
+        """Mark reminder as sent."""
+        self.reminder_status = 'SENT'
+        self.reminder_sent_at = timezone.now()
+        self.save(update_fields=['reminder_status', 'reminder_sent_at'])
+    
+    def mark_failed(self, reason):
+        """Mark reminder as failed."""
+        self.reminder_status = 'FAILED'
+        self.failure_reason = reason
+        self.retry_count += 1
+        self.save(update_fields=['reminder_status', 'failure_reason', 'retry_count'])
+    
+    def cancel(self):
+        """Cancel the reminder."""
+        if self.reminder_status == 'PENDING':
+            self.reminder_status = 'CANCELLED'
+            self.save(update_fields=['reminder_status'])

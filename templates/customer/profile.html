@@ -43,132 +43,336 @@
 {% block page_title %}My Profile{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-person-circle"></i> Profile Information
+<!-- Tabs Navigation -->
+<ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button">
+            <i class="bi bi-person"></i> Personal Info
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="medical-tab" data-bs-toggle="tab" data-bs-target="#medical" type="button">
+            <i class="bi bi-heart-pulse"></i> Medical Disclosure
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="driving-tab" data-bs-toggle="tab" data-bs-target="#driving" type="button">
+            <i class="bi bi-car-front"></i> Driving History
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="risk-tab" data-bs-toggle="tab" data-bs-target="#risk" type="button">
+            <i class="bi bi-shield-exclamation"></i> Risk Profile
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="profileTabsContent">
+    <!-- Personal Information Tab -->
+    <div class="tab-pane fade show active" id="personal" role="tabpanel">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-person-circle"></i> Profile Information
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm" method="post">
+                            {% csrf_token %}
+                            <h5 class="mb-3">Personal Information</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone_number" value="{{ user.phone_number|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="dob" class="form-label">Date of Birth</label>
+                                    <input type="date" class="form-control" id="dob" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d'|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="gender" class="form-label">Gender</label>
+                                    <select class="form-select" id="gender" name="gender">
+                                        <option value="">Select</option>
+                                        <option value="MALE" {% if profile.gender == 'MALE' %}selected{% endif %}>Male</option>
+                                        <option value="FEMALE" {% if profile.gender == 'FEMALE' %}selected{% endif %}>Female</option>
+                                        <option value="OTHER" {% if profile.gender == 'OTHER' %}selected{% endif %}>Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Residential Address</label>
+                                <textarea class="form-control" id="address" name="residential_address" rows="2">{{ profile.residential_address|default:'' }}</textarea>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="city" class="form-label">City</label>
+                                    <input type="text" class="form-control" id="city" name="residential_city" value="{{ profile.residential_city|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="state" class="form-label">State</label>
+                                    <input type="text" class="form-control" id="state" name="residential_state" value="{{ profile.residential_state|default:'' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="pincode" class="form-label">Pincode</label>
+                                    <input type="text" class="form-control" id="pincode" name="residential_pincode" value="{{ profile.residential_pincode|default:'' }}">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save"></i> Save Changes
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <form id="profileForm" method="post">
-                    {% csrf_token %}
-
-                    <h5 class="mb-3">Personal Information</h5>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="first_name" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="first_name" name="first_name"
-                                value="{{ user.first_name }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="last_name" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="last_name" name="last_name"
-                                value="{{ user.last_name }}">
-                        </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-shield-lock"></i> Account Status
                     </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" value="{{ user.email }}" disabled>
-                            <div class="form-text">Email cannot be changed</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="phone" class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" id="phone" name="phone_number"
-                                value="{{ user.phone_number|default:'' }}">
-                        </div>
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-check text-success" style="font-size: 4rem;"></i>
+                        <h5 class="mt-3">Verified Account</h5>
+                        <p class="text-muted small">Member since {{ user.date_joined|date:"M Y" }}</p>
                     </div>
-
-                    <hr class="my-4">
-
-                    <h5 class="mb-3">Additional Details</h5>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="dob" class="form-label">Date of Birth</label>
-                            <input type="date" class="form-control" id="dob" name="date_of_birth"
-                                value="{{ profile.date_of_birth|date:'Y-m-d'|default:'' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="gender" class="form-label">Gender</label>
-                            <select class="form-select" id="gender" name="gender">
-                                <option value="">Select</option>
-                                <option value="MALE" {% if profile.gender == 'MALE' %}selected{% endif %}>Male</option>
-                                <option value="FEMALE" {% if profile.gender == 'FEMALE' %}selected{% endif %}>Female</option>
-                                <option value="OTHER" {% if profile.gender == 'OTHER' %}selected{% endif %}>Other</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="marital_status" class="form-label">Marital Status</label>
-                            <select class="form-select" id="marital_status" name="marital_status">
-                                <option value="">Select</option>
-                                <option value="SINGLE" {% if profile.marital_status == 'SINGLE' %}selected{% endif %}>Single</option>
-                                <option value="MARRIED" {% if profile.marital_status == 'MARRIED' %}selected{% endif %}>Married</option>
-                                <option value="DIVORCED" {% if profile.marital_status == 'DIVORCED' %}selected{% endif %}>Divorced</option>
-                                <option value="WIDOWED" {% if profile.marital_status == 'WIDOWED' %}selected{% endif %}>Widowed</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="occupation" class="form-label">Occupation Type</label>
-                            <select class="form-select" id="occupation" name="occupation_type">
-                                <option value="">Select</option>
-                                <option value="SALARIED" {% if profile.occupation_type == 'SALARIED' %}selected{% endif %}>Salaried</option>
-                                <option value="SELF_EMPLOYED" {% if profile.occupation_type == 'SELF_EMPLOYED' %}selected{% endif %}>Self Employed</option>
-                                <option value="STUDENT" {% if profile.occupation_type == 'STUDENT' %}selected{% endif %}>Student</option>
-                                <option value="RETIRED" {% if profile.occupation_type == 'RETIRED' %}selected{% endif %}>Retired</option>
-                                <option value="UNEMPLOYED" {% if profile.occupation_type == 'UNEMPLOYED' %}selected{% endif %}>Unemployed</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="address" class="form-label">Residential Address</label>
-                        <textarea class="form-control" id="address" name="residential_address"
-                            rows="2">{{ profile.residential_address|default:'' }}</textarea>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label for="city" class="form-label">City</label>
-                            <input type="text" class="form-control" id="city" name="residential_city"
-                                value="{{ profile.residential_city|default:'' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="state" class="form-label">State</label>
-                            <input type="text" class="form-control" id="state" name="residential_state"
-                                value="{{ profile.residential_state|default:'' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="pincode" class="form-label">Pincode</label>
-                            <input type="text" class="form-control" id="pincode" name="residential_pincode"
-                                value="{{ profile.residential_pincode|default:'' }}">
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-save"></i> Save Changes
-                    </button>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-shield-lock"></i> Account Status
+    <!-- Medical Disclosure Tab -->
+    <div class="tab-pane fade" id="medical" role="tabpanel">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between">
+                        <span><i class="bi bi-heart-pulse"></i> Add Medical Disclosure</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">For health insurance applications, please disclose any medical conditions.</p>
+                        <form id="medicalForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Do you have any existing medical conditions?</label>
+                                <textarea class="form-control" id="medical_condition" rows="2" placeholder="e.g., Diabetes, Hypertension, etc."></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Current Medications</label>
+                                <textarea class="form-control" id="medications" rows="2" placeholder="List any medications you are currently taking"></textarea>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Do you smoke?</label>
+                                    <select class="form-select" id="is_smoker">
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Regular alcohol consumption?</label>
+                                    <select class="form-select" id="is_alcohol_consumer">
+                                        <option value="false">No</option>
+                                        <option value="true">Yes</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Any previous hospitalizations?</label>
+                                <textarea class="form-control" id="hospitalization_history" rows="2" placeholder="Details of any hospitalizations in the past 5 years"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus"></i> Add Disclosure
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Existing Disclosures -->
+                {% if medical_disclosures %}
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-clock-history"></i> Previous Disclosures
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Condition</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for disc in medical_disclosures %}
+                                <tr>
+                                    <td>{{ disc.disclosure_date|date:"M d, Y" }}</td>
+                                    <td>{{ disc.medical_condition|default:"None disclosed"|truncatechars:30 }}</td>
+                                    <td><span class="badge bg-success">Recorded</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            <div class="card-body text-center">
-                <i class="bi bi-person-check text-success" style="font-size: 4rem;"></i>
-                <h5 class="mt-3">Verified Account</h5>
-                <p class="text-muted small">Member since {{ user.date_joined|date:"M Y" }}</p>
+            <div class="col-lg-4">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Why we need this</h6>
+                    <p class="small mb-0">Medical disclosures help us provide accurate health insurance quotes and ensure your claims are processed smoothly.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driving History Tab -->
+    <div class="tab-pane fade" id="driving" role="tabpanel">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-car-front"></i> Driving History
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">For motor insurance applications, please provide your driving history.</p>
+                        <form id="drivingForm">
+                            {% csrf_token %}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">License Number</label>
+                                    <input type="text" class="form-control" id="license_number" value="{{ driving_history.license_number|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Years of Driving Experience</label>
+                                    <input type="number" class="form-control" id="years_experience" min="0" value="{{ driving_history.total_years_experience|default:0 }}">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Traffic Violations (last 5 years)</label>
+                                    <input type="number" class="form-control" id="violations_count" min="0" value="{{ driving_history.violations_count|default:0 }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Accidents (last 5 years)</label>
+                                    <input type="number" class="form-control" id="accidents_count" min="0" value="{{ driving_history.accidents_count|default:0 }}">
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="license_valid" {% if driving_history.is_license_valid %}checked{% endif %}>
+                                <label class="form-check-label" for="license_valid">My license is currently valid</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Driving History
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Why we need this</h6>
+                    <p class="small mb-0">Your driving history helps us calculate accurate motor insurance premiums. Safe drivers get better rates!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Profile Tab -->
+    <div class="tab-pane fade" id="risk" role="tabpanel">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-shield-exclamation"></i> Your Risk Profile
+                    </div>
+                    <div class="card-body">
+                        {% if risk_profile %}
+                        <div class="text-center mb-4">
+                            <span class="badge bg-{% if risk_profile.risk_category == 'LOW' %}success{% elif risk_profile.risk_category == 'HIGH' or risk_profile.risk_category == 'CRITICAL' %}danger{% else %}warning{% endif %} fs-3 px-4 py-3">
+                                {{ risk_profile.risk_category }} RISK
+                            </span>
+                            <h2 class="mt-3">Score: {{ risk_profile.risk_score }}/100</h2>
+                        </div>
+                        
+                        <h5>Risk Factor Breakdown</h5>
+                        <table class="table">
+                            <tr>
+                                <td>Age Risk Factor</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-{% if risk_profile.age_risk_factor < 30 %}success{% elif risk_profile.age_risk_factor < 60 %}warning{% else %}danger{% endif %}" style="width: {{ risk_profile.age_risk_factor }}%">
+                                            {{ risk_profile.age_risk_factor }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Medical Risk Factor</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-{% if risk_profile.medical_risk_factor < 30 %}success{% elif risk_profile.medical_risk_factor < 60 %}warning{% else %}danger{% endif %}" style="width: {{ risk_profile.medical_risk_factor }}%">
+                                            {{ risk_profile.medical_risk_factor }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Claim History Risk</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-{% if risk_profile.claim_history_risk_factor < 30 %}success{% elif risk_profile.claim_history_risk_factor < 60 %}warning{% else %}danger{% endif %}" style="width: {{ risk_profile.claim_history_risk_factor }}%">
+                                            {{ risk_profile.claim_history_risk_factor }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Driving Risk Factor</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-{% if risk_profile.driving_risk_factor < 30 %}success{% elif risk_profile.driving_risk_factor < 60 %}warning{% else %}danger{% endif %}" style="width: {{ risk_profile.driving_risk_factor }}%">
+                                            {{ risk_profile.driving_risk_factor }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                        <p class="text-muted small">Your risk profile affects your insurance premiums. Lower risk = lower premiums!</p>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-shield-x text-muted" style="font-size: 4rem;"></i>
+                            <h5 class="mt-3">No Risk Profile Yet</h5>
+                            <p class="text-muted">Complete your profile and submit an application to generate your risk profile.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-lightbulb"></i> Improve Your Score</h6>
+                    <ul class="small mb-0">
+                        <li>Maintain a clean driving record</li>
+                        <li>Avoid claims for minor issues</li>
+                        <li>Keep your medical disclosures accurate</li>
+                        <li>Update your profile regularly</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -177,16 +381,13 @@
 
 {% block extra_js %}
 <script>
-    document.getElementById('profileForm').addEventListener('submit', async function (e) {
+    // Profile form
+    document.getElementById('profileForm').addEventListener('submit', async function(e) {
         e.preventDefault();
-
         const formData = new FormData(this);
         const data = {};
-
         formData.forEach((value, key) => {
-            if (value && key !== 'csrfmiddlewaretoken') {
-                data[key] = value;
-            }
+            if (value && key !== 'csrfmiddlewaretoken') data[key] = value;
         });
 
         try {
@@ -199,16 +400,78 @@
                 credentials: 'include',
                 body: JSON.stringify(data)
             });
-
             if (response.ok) {
-                alert('Profile updated successfully!');
+                alert('Profile updated!');
                 window.location.reload();
             } else {
-                const error = await response.json();
-                alert('Error: ' + JSON.stringify(error));
+                alert('Error updating profile');
             }
         } catch (err) {
-            alert('Network error: ' + err.message);
+            alert('Network error');
+        }
+    });
+
+    // Medical form
+    document.getElementById('medicalForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const data = {
+            medical_condition: document.getElementById('medical_condition').value,
+            current_medications: document.getElementById('medications').value,
+            is_smoker: document.getElementById('is_smoker').value === 'true',
+            is_alcohol_consumer: document.getElementById('is_alcohol_consumer').value === 'true',
+            hospitalization_history: document.getElementById('hospitalization_history').value
+        };
+
+        try {
+            const response = await fetch('/api/v1/medical-disclosure/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                alert('Medical disclosure saved!');
+                window.location.reload();
+            } else {
+                alert('Error saving disclosure');
+            }
+        } catch (err) {
+            alert('Network error');
+        }
+    });
+
+    // Driving form
+    document.getElementById('drivingForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const data = {
+            license_number: document.getElementById('license_number').value,
+            total_years_experience: parseInt(document.getElementById('years_experience').value),
+            violations_count: parseInt(document.getElementById('violations_count').value),
+            accidents_count: parseInt(document.getElementById('accidents_count').value),
+            is_license_valid: document.getElementById('license_valid').checked
+        };
+
+        try {
+            const response = await fetch('/api/v1/driving-history/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                alert('Driving history saved!');
+                window.location.reload();
+            } else {
+                alert('Error saving driving history');
+            }
+        } catch (err) {
+            alert('Network error');
         }
     });
 </script>

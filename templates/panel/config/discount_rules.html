@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Discount Rules - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-grid"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_analytics' %}">
+        <i class="bi bi-graph-up"></i> Analytics
+    </a>
+</li>
+<li class="nav-item mt-3">
+    <small class="text-muted px-3">Configuration</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_premium_slabs' %}">
+        <i class="bi bi-sliders"></i> Premium Slabs
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_discount_rules' %}">
+        <i class="bi bi-percent"></i> Discount Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_eligibility_rules' %}">
+        <i class="bi bi-check-circle"></i> Eligibility Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_business_config' %}">
+        <i class="bi bi-gear"></i> System Config
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Discount Rules{% endblock %}
+
+{% block content %}
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Search rules..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="type">
+                    <option value="">All Insurance Types</option>
+                    {% for type in insurance_types %}
+                    <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"d" %}selected{% endif %}>{{ type.type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-percent"></i> Discount Rules</span>
+        <small class="text-muted">{{ rules|length }} rule(s)</small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Rule Name</th>
+                        <th>Insurance Type</th>
+                        <th>Discount</th>
+                        <th>Max Amount</th>
+                        <th>Priority</th>
+                        <th>Combinable</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr>
+                        <td><code>{{ rule.rule_code }}</code></td>
+                        <td><strong>{{ rule.rule_name }}</strong></td>
+                        <td>
+                            {% if rule.insurance_type %}
+                            <span class="badge bg-primary">{{ rule.insurance_type.type_code }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">All Types</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="text-success fw-bold">{{ rule.discount_percentage }}%</span></td>
+                        <td>
+                            {% if rule.discount_max_amount %}
+                            ₹{{ rule.discount_max_amount|floatformat:0 }}
+                            {% else %}
+                            <span class="text-muted">No cap</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ rule.rule_priority }}</td>
+                        <td>
+                            {% if rule.is_combinable %}
+                            <i class="bi bi-check-circle text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle text-danger"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if rule.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No discount rules configured yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card mt-4">
+    <div class="card-body">
+        <h6><i class="bi bi-info-circle"></i> About Discount Rules</h6>
+        <p class="text-muted mb-0">
+            Discount rules define automatic discounts based on customer criteria.
+            Higher priority rules are evaluated first. Non-combinable discounts are mutually exclusive.
+        </p>
+    </div>
+</div>
+{% endblock %}

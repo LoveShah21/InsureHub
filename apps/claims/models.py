@@ -274,3 +274,194 @@ class ClaimDocument(models.Model):
     
     def __str__(self):
         return f"{self.document_type} - {self.claim.claim_number}"
+
+
+class ClaimStatusHistory(models.Model):
+    """
+    Audit trail for claim status changes.
+    
+    Records every status transition with reason and actor.
+    """
+    claim = models.ForeignKey(
+        Claim, on_delete=models.CASCADE,
+        related_name='status_history'
+    )
+    old_status = models.CharField(max_length=20, blank=True)
+    new_status = models.CharField(max_length=20)
+    status_change_reason = models.TextField(blank=True)
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.RESTRICT,
+        related_name='claim_status_changes'
+    )
+    status_changed_at = models.DateTimeField(auto_now_add=True)
+    
+    # Additional context
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'claim_status_history'
+        ordering = ['-status_changed_at']
+        indexes = [
+            models.Index(fields=['claim', 'status_changed_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.claim.claim_number}: {self.old_status} → {self.new_status}"
+
+
+class ClaimAssessment(models.Model):
+    """
+    Surveyor assessment of a claim.
+    
+    Contains damage assessment, findings, and recommended amount.
+    """
+    ASSESSMENT_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('COMPLETED', 'Completed'),
+        ('UNDER_REVIEW', 'Under Review'),
+    ]
+    
+    claim = models.ForeignKey(
+        Claim, on_delete=models.CASCADE,
+        related_name='assessments'
+    )
+    surveyor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.RESTRICT,
+        related_name='claim_assessments'
+    )
+    
+    # Assessment details
+    assessment_date = models.DateField()
+    assessment_location = models.TextField(blank=True)
+    assessment_report_url = models.URLField(blank=True)
+    
+    # Findings
+    damage_assessment = models.TextField(
+        help_text="Description of damage/loss assessed"
+    )
+    assessment_findings = models.JSONField(
+        default=dict,
+        help_text="Detailed findings in JSON format"
+    )
+    
+    # Financial assessment
+    loss_amount_assessed = models.DecimalField(
+        max_digits=15, decimal_places=2, null=True, blank=True,
+        help_text="Total loss amount assessed by surveyor"
+    )
+    deductible_applicable = models.DecimalField(
+        max_digits=15, decimal_places=2, default=Decimal('0.00')
+    )
+    net_claim_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, null=True, blank=True,
+        help_text="Recommended claim amount (loss - deductible)"
+    )
+    
+    # Status
+    assessment_status = models.CharField(
+        max_length=20, choices=ASSESSMENT_STATUS_CHOICES, default='PENDING'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'claim_assessments'
+        ordering = ['-assessment_date']
+    
+    def __str__(self):
+        return f"Assessment: {self.claim.claim_number} by {self.surveyor.email}"
+    
+    def calculate_net_amount(self):
+        """Calculate net claim amount after deductible."""
+        if self.loss_amount_assessed:
+            self.net_claim_amount = self.loss_amount_assessed - self.deductible_applicable
+            if self.net_claim_amount < 0:
+                self.net_claim_amount = Decimal('0.00')
+            self.save(update_fields=['net_claim_amount'])
+        return self.net_claim_amount
+
+
+class ClaimSettlement(models.Model):
+    """
+    Settlement details for approved claims.
+    
+    Contains payment method, bank details, and settlement status.
+    """
+    SETTLEMENT_METHOD_CHOICES = [
+        ('BANK_TRANSFER', 'Bank Transfer'),
+        ('CHEQUE', 'Cheque'),
+        ('DIRECT_REPAIR', 'Direct Repair'),
+    ]
+    
+    SETTLEMENT_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PROCESSING', 'Processing'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+    
+    claim = models.OneToOneField(
+        Claim, on_delete=models.CASCADE,
+        related_name='settlement'
+    )
+    
+    # Settlement amount
+    settlement_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    settlement_date = models.DateField(null=True, blank=True)
+    
+    # Payment method and details
+    settlement_method = models.CharField(
+        max_length=20, choices=SETTLEMENT_METHOD_CHOICES, default='BANK_TRANSFER'
+    )
+    bank_account_number = models.CharField(max_length=100, blank=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    bank_ifsc_code = models.CharField(max_length=50, blank=True)
+    account_holder_name = models.CharField(max_length=255, blank=True)
+    
+    # Cheque details (if applicable)
+    cheque_number = models.CharField(max_length=50, blank=True)
+    cheque_date = models.DateField(null=True, blank=True)
+    
+    # Settlement status
+    settlement_status = models.CharField(
+        max_length=20, choices=SETTLEMENT_STATUS_CHOICES, default='PENDING'
+    )
+    settlement_reference_number = models.CharField(max_length=100, blank=True)
+    failure_reason = models.TextField(blank=True)
+    
+    # Approval
+    settlement_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.RESTRICT,
+        related_name='approved_settlements'
+    )
+    settlement_approved_at = models.DateTimeField(auto_now_add=True)
+    settlement_processed_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'claim_settlement'
+    
+    def __str__(self):
+        return f"Settlement: {self.claim.claim_number} - ₹{self.settlement_amount}"
+    
+    def mark_completed(self, reference_number):
+        """Mark settlement as completed."""
+        self.settlement_status = 'COMPLETED'
+        self.settlement_reference_number = reference_number
+        self.settlement_processed_at = timezone.now()
+        self.settlement_date = timezone.now().date()
+        self.save()
+    
+    def mark_failed(self, reason):
+        """Mark settlement as failed."""
+        self.settlement_status = 'FAILED'
+        self.failure_reason = reason
+        self.save()
+

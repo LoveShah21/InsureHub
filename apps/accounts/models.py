@@ -253,6 +253,9 @@ class AuditLog(models.Model):
         ('LOGIN', 'Login'),
         ('LOGOUT', 'Logout'),
         ('PERMISSION_DENIED', 'Permission Denied'),
+        ('STATUS_CHANGE', 'Status Change'),
+        ('APPROVE', 'Approve'),
+        ('REJECT', 'Reject'),
     ]
     
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
@@ -277,3 +280,29 @@ class AuditLog(models.Model):
     
     def __str__(self):
         return f"{self.action_type} on {self.table_name} by {self.user} at {self.timestamp}"
+    
+    @classmethod
+    def log_action(cls, user, action_type, table_name, record_id=None, description='', old_values=None, new_values=None, request=None):
+        """Create an audit log entry."""
+        ip_address = None
+        if request:
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip_address = x_forwarded_for.split(',')[0].strip()
+            else:
+                ip_address = request.META.get('REMOTE_ADDR')
+        
+        return cls.objects.create(
+            user=user,
+            table_name=table_name,
+            record_id=record_id,
+            action_type=action_type,
+            description=description,
+            old_values=old_values,
+            new_values=new_values,
+            ip_address=ip_address
+        )
+
+
+# Import DataModificationHistory from audit_models
+from .audit_models import DataModificationHistory

@@ -54,6 +54,14 @@ urlpatterns = [
     path('panel/policies/', views.AdminPolicyListView.as_view(), name='admin_policies'),
     path('panel/payments/', views.AdminPaymentListView.as_view(), name='admin_payments'),
     
+    # Configuration Management
+    path('panel/config/premium-slabs/', views.AdminPremiumSlabListView.as_view(), name='admin_premium_slabs'),
+    path('panel/config/discount-rules/', views.AdminDiscountRuleListView.as_view(), name='admin_discount_rules'),
+    path('panel/config/business/', views.AdminBusinessConfigListView.as_view(), name='admin_business_config'),
+    path('panel/config/eligibility/', views.AdminEligibilityRuleListView.as_view(), name='admin_eligibility_rules'),
+    path('panel/config/claim-thresholds/', views.AdminClaimThresholdListView.as_view(), name='admin_claim_thresholds'),
+    path('panel/analytics/', views.AdminAnalyticsDashboardView.as_view(), name='admin_analytics'),
+    
     # Payment callbacks
     path('payment/success/', views.payment_success, name='payment_success'),
     path('payment/failure/', views.payment_failure, name='payment_failure'),

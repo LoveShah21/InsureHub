@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Eligibility Rules - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item mt-3">
+    <small class="text-muted px-3">Configuration</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_premium_slabs' %}">
+        <i class="bi bi-sliders"></i> Premium Slabs
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_discount_rules' %}">
+        <i class="bi bi-percent"></i> Discount Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_eligibility_rules' %}">
+        <i class="bi bi-check-circle"></i> Eligibility Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_claim_thresholds' %}">
+        <i class="bi bi-bar-chart"></i> Claim Thresholds
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_business_config' %}">
+        <i class="bi bi-gear"></i> System Config
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Policy Eligibility Rules{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <select class="form-select" name="type">
+                    <option value="">All Insurance Types</option>
+                    {% for type in insurance_types %}
+                    <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"d" %}selected{% endif %}>{{ type.type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-check-circle"></i> Policy Eligibility Rules
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Insurance Type</th>
+                        <th>Rule Name</th>
+                        <th>Conditions</th>
+                        <th>Priority</th>
+                        <th>Error Message</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr>
+                        <td><span class="badge bg-primary">{{ rule.insurance_type.type_code }}</span></td>
+                        <td><strong>{{ rule.rule_name }}</strong></td>
+                        <td><code class="small">{{ rule.rule_condition|truncatechars:50 }}</code></td>
+                        <td>{{ rule.rule_priority }}</td>
+                        <td class="text-muted small">{{ rule.error_message|truncatechars:40 }}</td>
+                        <td>
+                            {% if rule.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">No eligibility rules configured.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

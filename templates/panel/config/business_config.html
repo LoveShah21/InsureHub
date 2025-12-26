@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}System Configuration - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_analytics' %}">
+        <i class="bi bi-graph-up"></i> Analytics
+    </a>
+</li>
+<li class="nav-item mt-3">
+    <small class="text-muted px-3">Configuration</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_premium_slabs' %}">
+        <i class="bi bi-sliders"></i> Premium Slabs
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_discount_rules' %}">
+        <i class="bi bi-percent"></i> Discount Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_business_config' %}">
+        <i class="bi bi-gear"></i> System Config
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}System Configuration{% endblock %}
+
+{% block content %}
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Search config..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="type">
+                    <option value="">All Categories</option>
+                    {% for choice in config_types %}
+                    <option value="{{ choice.0 }}" {% if request.GET.type == choice.0 %}selected{% endif %}>{{ choice.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-gear"></i> Business Configuration</span>
+        <small class="text-muted">{{ configs|length }} setting(s)</small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Category</th>
+                        <th>Config Key</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for config in configs %}
+                    <tr>
+                        <td><span class="badge bg-info">{{ config.config_type }}</span></td>
+                        <td><code>{{ config.config_key }}</code></td>
+                        <td><strong>{{ config.config_value }}</strong></td>
+                        <td class="text-muted">{{ config.config_description|truncatewords:10 }}</td>
+                        <td>
+                            {% if config.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No configuration settings found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Common Settings Reference -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-book"></i> Common Settings Reference
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6 class="text-primary">Tax Settings</h6>
+                <ul class="list-unstyled small">
+                    <li><code>GST_RATE</code> - GST percentage</li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-primary">Quote Settings</h6>
+                <ul class="list-unstyled small">
+                    <li><code>QUOTE_VALIDITY_DAYS</code> - Quote validity</li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-primary">Security Settings</h6>
+                <ul class="list-unstyled small">
+                    <li><code>ACCOUNT_LOCK_THRESHOLD</code> - Failed logins</li>
+                    <li><code>SESSION_TIMEOUT</code> - Session timeout (min)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

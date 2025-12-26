@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Claim Thresholds - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item mt-3">
+    <small class="text-muted px-3">Configuration</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_premium_slabs' %}">
+        <i class="bi bi-sliders"></i> Premium Slabs
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_claim_thresholds' %}">
+        <i class="bi bi-bar-chart"></i> Claim Thresholds
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_business_config' %}">
+        <i class="bi bi-gear"></i> System Config
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Claim Approval Thresholds{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-bar-chart"></i> Claim Approval Thresholds
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Defines which role can approve claims at different amount levels.</p>
+        <div class="table-responsive">
+            <table class="table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Insurance Type</th>
+                        <th>Amount Range</th>
+                        <th>Approval Level</th>
+                        <th>Required Role</th>
+                        <th>Max Processing Days</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for threshold in thresholds %}
+                    <tr>
+                        <td><span class="badge bg-primary">{{ threshold.insurance_type.type_code }}</span></td>
+                        <td>₹{{ threshold.min_claim_amount|floatformat:0 }} - ₹{{ threshold.max_claim_amount|floatformat:0 }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ threshold.get_approval_level_display }}</span>
+                        </td>
+                        <td><strong>{{ threshold.required_approver_role.role_name }}</strong></td>
+                        <td>{{ threshold.max_processing_days }} days</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">No claim thresholds configured.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -185,3 +185,15 @@ class RiderAddon(models.Model):
     
     def __str__(self):
         return f"{self.addon_name} ({self.insurance_type.type_code})"
+
+
+# Import configuration models for convenience
+from .config_models import (
+    PremiumSlab,
+    PolicyEligibilityRule,
+    DiscountRule,
+    QuoteCalculationWeight,
+    ClaimApprovalThreshold,
+    BusinessConfiguration,
+    CompanyConfiguration,
+)

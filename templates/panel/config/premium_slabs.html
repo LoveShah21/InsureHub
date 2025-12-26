@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}Premium Slabs - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-grid"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_companies' %}">
+        <i class="bi bi-building"></i> Companies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_analytics' %}">
+        <i class="bi bi-graph-up"></i> Analytics
+    </a>
+</li>
+<li class="nav-item mt-3">
+    <small class="text-muted px-3">Configuration</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_premium_slabs' %}">
+        <i class="bi bi-sliders"></i> Premium Slabs
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_discount_rules' %}">
+        <i class="bi bi-percent"></i> Discount Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_eligibility_rules' %}">
+        <i class="bi bi-check-circle"></i> Eligibility Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_claim_thresholds' %}">
+        <i class="bi bi-bar-chart"></i> Claim Thresholds
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_business_config' %}">
+        <i class="bi bi-gear"></i> System Config
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Premium Slabs{% endblock %}
+
+{% block content %}
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <select class="form-select" name="type">
+                    <option value="">All Insurance Types</option>
+                    {% for type in insurance_types %}
+                    <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"d" %}selected{% endif %}>{{ type.type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="is_active">
+                    <option value="">All Status</option>
+                    <option value="true" {% if request.GET.is_active == 'true' %}selected{% endif %}>Active</option>
+                    <option value="false" {% if request.GET.is_active == 'false' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-sliders"></i> Premium Calculation Slabs</span>
+        <small class="text-muted">{{ slabs|length }} slab(s)</small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Insurance Type</th>
+                        <th>Slab Name</th>
+                        <th>Coverage Range</th>
+                        <th>Base Premium</th>
+                        <th>% Markup</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for slab in slabs %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-primary">{{ slab.insurance_type.type_code }}</span>
+                        </td>
+                        <td><strong>{{ slab.slab_name }}</strong></td>
+                        <td>
+                            ₹{{ slab.min_coverage_amount|floatformat:0 }} - ₹{{ slab.max_coverage_amount|floatformat:0 }}
+                        </td>
+                        <td>₹{{ slab.base_premium|floatformat:2 }}</td>
+                        <td>{{ slab.percentage_markup }}%</td>
+                        <td>
+                            {% if slab.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No premium slabs configured yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card mt-4">
+    <div class="card-body">
+        <h6><i class="bi bi-info-circle"></i> About Premium Slabs</h6>
+        <p class="text-muted mb-0">
+            Premium slabs define the base premium calculation for different coverage amount ranges.
+            The formula is: <code>Base Premium + (Coverage Amount × % Markup)</code>
+        </p>
+    </div>
+</div>
+{% endblock %}
