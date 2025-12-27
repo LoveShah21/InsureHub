@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}Coverage Types - Admin Panel{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'panel/includes/sidebar.html' %}
+{% endblock %}
+
+{% block page_title %}Coverage Types{% endblock %}
+
+{% block content %}
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Search coverages..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="type">
+                    <option value="">All Insurance Types</option>
+                    {% for type in insurance_types %}
+                    <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"d" %}selected{% endif %}>{{ type.type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-layers"></i> Coverage Types</span>
+        <div>
+            <small class="text-muted me-3">{{ coverages|length }} coverage(s)</small>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addCoverageModal">
+                <i class="bi bi-plus-lg"></i> Add Coverage
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">Coverage types define what's covered under each insurance type. The base premium per unit determines pricing.</p>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Insurance Type</th>
+                        <th>Coverage Name</th>
+                        <th>Code</th>
+                        <th>Base Premium</th>
+                        <th>Unit</th>
+                        <th>Mandatory</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for coverage in coverages %}
+                    <tr>
+                        <td><span class="badge bg-primary">{{ coverage.insurance_type.type_code }}</span></td>
+                        <td>
+                            <strong>{{ coverage.coverage_name }}</strong>
+                            {% if coverage.description %}
+                            <p class="text-muted small mb-0">{{ coverage.description|truncatewords:10 }}</p>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ coverage.coverage_code }}</code></td>
+                        <td><span class="text-success fw-bold">₹{{ coverage.base_premium_per_unit|floatformat:2 }}</span></td>
+                        <td class="text-muted small">{{ coverage.unit_of_measurement }}</td>
+                        <td>
+                            {% if coverage.is_mandatory %}
+                            <span class="badge bg-warning text-dark">Required</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Optional</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editCoverage({{ coverage.id }}, '{{ coverage.coverage_name|escapejs }}', '{{ coverage.base_premium_per_unit }}', '{{ coverage.description|escapejs }}', {{ coverage.is_mandatory|yesno:'true,false' }})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteCoverage({{ coverage.id }})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No coverage types found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Coverage Modal -->
+<div class="modal fade" id="addCoverageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-lg"></i> Add Coverage Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Insurance Type</label>
+                        <select class="form-select" name="insurance_type" required>
+                            {% for type in insurance_types %}
+                            <option value="{{ type.id }}">{{ type.type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Coverage Name</label>
+                        <input type="text" class="form-control" name="coverage_name" required placeholder="e.g. Third Party Liability">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Coverage Code (unique)</label>
+                        <input type="text" class="form-control" name="coverage_code" required placeholder="e.g. TPL">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Base Premium (₹)</label>
+                            <input type="number" class="form-control" name="base_premium_per_unit" step="0.01" required value="0">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Unit of Measurement</label>
+                            <input type="text" class="form-control" name="unit_of_measurement" value="per policy">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_mandatory" id="isMandatoryCheck">
+                        <label class="form-check-label" for="isMandatoryCheck">Mandatory coverage</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Coverage Modal -->
+<div class="modal fade" id="editCoverageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit Coverage Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="coverage_id" id="editCoverageId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Coverage Name</label>
+                        <input type="text" class="form-control" name="coverage_name" id="editCoverageName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Base Premium (₹)</label>
+                        <input type="number" class="form-control" name="base_premium_per_unit" id="editBasePremium" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" id="editDescription" rows="2"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_mandatory" id="editIsMandatory">
+                        <label class="form-check-label" for="editIsMandatory">Mandatory coverage</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check"></i> Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function editCoverage(id, name, premium, description, isMandatory) {
+        document.getElementById('editCoverageId').value = id;
+        document.getElementById('editCoverageName').value = name;
+        document.getElementById('editBasePremium').value = premium;
+        document.getElementById('editDescription').value = description;
+        document.getElementById('editIsMandatory').checked = isMandatory;
+        
+        var modal = new bootstrap.Modal(document.getElementById('editCoverageModal'));
+        modal.show();
+    }
+    
+    function deleteCoverage(coverageId) {
+        if(confirm('Delete this coverage type? This cannot be undone.')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="coverage_id" value="${coverageId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

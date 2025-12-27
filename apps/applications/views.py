@@ -133,6 +133,7 @@ class InsuranceApplicationViewSet(viewsets.ModelViewSet):
         
         action_name = serializer.validated_data['action']
         reason = serializer.validated_data.get('reason', '')
+        old_status = application.status
         
         try:
             if action_name == 'start_review':
@@ -141,6 +142,11 @@ class InsuranceApplicationViewSet(viewsets.ModelViewSet):
                 application.approve(request.user)
             elif action_name == 'reject':
                 application.reject(request.user, reason)
+            
+            # Send email notification if status changed
+            if application.status != old_status:
+                from apps.notifications.email_service import send_application_status_email
+                send_application_status_email(application, old_status)
             
             return Response({
                 'message': f'Application {action_name} successful.',

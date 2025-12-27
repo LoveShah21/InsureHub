@@ -3,36 +3,7 @@
 {% block title %}Dashboard - Admin Panel{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'admin_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_users' %}">
-        <i class="bi bi-people"></i> Users
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
-        <i class="bi bi-collection"></i> Insurance Types
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_companies' %}">
-        <i class="bi bi-building"></i> Companies
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_policies' %}">
-        <i class="bi bi-shield-check"></i> Policies
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_payments' %}">
-        <i class="bi bi-credit-card"></i> Payments
-    </a>
-</li>
+{% include 'panel/includes/sidebar.html' %}
 {% endblock %}
 
 {% block page_title %}Admin Dashboard{% endblock %}

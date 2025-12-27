@@ -1,0 +1,56 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Welcome to InsureHub{% endblock %}
+
+{% block content %}
+<p class="greeting">Hello {{ customer_name }},</p>
+
+<p class="message">
+    🎉 <strong>Welcome to InsureHub!</strong> We're excited to have you on board.
+</p>
+
+<p class="message">
+    InsureHub is your one-stop platform for all your insurance needs. 
+    Whether you're looking for motor, health, travel, or commercial insurance, 
+    we've got you covered with the best offers from top insurance companies.
+</p>
+
+<div class="highlight-box">
+    <div class="label">Your Account Email</div>
+    <div class="value">{{ email }}</div>
+</div>
+
+<p class="message">
+    <strong>What you can do with InsureHub:</strong>
+</p>
+
+<table class="info-table">
+    <tr>
+        <td>📝 Apply for Insurance</td>
+        <td>Submit applications online</td>
+    </tr>
+    <tr>
+        <td>💰 Compare Quotes</td>
+        <td>Get best offers from multiple companies</td>
+    </tr>
+    <tr>
+        <td>🛡️ Manage Policies</td>
+        <td>View and track all your policies</td>
+    </tr>
+    <tr>
+        <td>📋 File Claims</td>
+        <td>Easy and quick claim submission</td>
+    </tr>
+</table>
+
+<div style="text-align: center;">
+    <a href="http://{{ login_url }}/customer/dashboard/" class="btn">
+        Go to Dashboard
+    </a>
+</div>
+
+<p class="message" style="margin-top: 30px; font-size: 14px; color: #888;">
+    Need help? Our support team is always here to assist you. 
+    Feel free to reach out if you have any questions.
+</p>
+{% endblock %}

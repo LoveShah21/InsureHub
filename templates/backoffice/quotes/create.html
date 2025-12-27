@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block title %}Generate Quotes - Backoffice{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'backoffice_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Generate Quotes{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-calculator"></i> Generate Quotes for Application
+            </div>
+            <div class="card-body">
+                <form id="generateQuoteForm">
+                    {% csrf_token %}
+                    
+                    <!-- Select Application -->
+                    <div class="mb-4">
+                        <label for="application" class="form-label fw-bold">Select Approved Application *</label>
+                        <select class="form-select form-select-lg" id="application" name="application_id" required>
+                            <option value="">-- Select an Application --</option>
+                            {% for app in approved_applications %}
+                            <option value="{{ app.id }}" data-type="{{ app.insurance_type.id }}" data-coverage="{{ app.requested_coverage_amount }}" data-tenure="{{ app.policy_tenure_months }}"
+                                {% if preselected_app == app.id %}selected{% endif %}>
+                                {{ app.application_number }} - {{ app.customer.user.email }} ({{ app.insurance_type.type_name }})
+                            </option>
+                            {% empty %}
+                            <option value="" disabled>No approved applications available</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Application Details (shown after selection) -->
+                    <div id="applicationDetails" class="mb-4" style="display: none;">
+                        <div class="bg-light p-3 rounded">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="text-muted small">Insurance Type</label>
+                                    <p id="detailType" class="fw-bold mb-2">-</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small">Coverage Amount</label>
+                                    <p id="detailCoverage" class="fw-bold mb-2">-</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small">Policy Tenure</label>
+                                    <p id="detailTenure" class="fw-bold mb-0">-</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small">Customer</label>
+                                    <p id="detailCustomer" class="fw-bold mb-0">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Select Coverages -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Coverages</label>
+                        <div id="coveragesList" class="border rounded p-3">
+                            <p class="text-muted mb-0">Select an application to see available coverages</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Select Addons -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Add-ons (Optional)</label>
+                        <div id="addonsList" class="border rounded p-3">
+                            <p class="text-muted mb-0">Select an application to see available add-ons</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Select Companies -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Insurance Companies</label>
+                        <div class="border rounded p-3">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="selectAllCompanies" checked>
+                                <label class="form-check-label fw-bold" for="selectAllCompanies">
+                                    Select All Companies
+                                </label>
+                            </div>
+                            <hr>
+                            {% for company in companies %}
+                            <div class="form-check">
+                                <input class="form-check-input company-checkbox" type="checkbox" value="{{ company.id }}" id="company{{ company.id }}" checked>
+                                <label class="form-check-label" for="company{{ company.id }}">
+                                    {{ company.company_name }}
+                                    <span class="badge bg-warning text-dark ms-2">{{ company.service_rating }}★</span>
+                                    <small class="text-muted">(Settlement: {{ company.claim_settlement_ratio|floatformat:0 }}%)</small>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                            <i class="bi bi-calculator"></i> Generate Quotes
+                        </button>
+                        <a href="{% url 'backoffice_quotes' %}" class="btn btn-outline-secondary btn-lg">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> How It Works
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-start mb-3">
+                    <div class="rounded-circle bg-primary text-white p-2 me-3" style="min-width: 32px; text-align: center;">1</div>
+                    <div>
+                        <strong>Select Application</strong>
+                        <p class="text-muted small mb-0">Choose an approved application</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-start mb-3">
+                    <div class="rounded-circle bg-primary text-white p-2 me-3" style="min-width: 32px; text-align: center;">2</div>
+                    <div>
+                        <strong>Choose Coverages & Add-ons</strong>
+                        <p class="text-muted small mb-0">Select required coverage options</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-start mb-3">
+                    <div class="rounded-circle bg-primary text-white p-2 me-3" style="min-width: 32px; text-align: center;">3</div>
+                    <div>
+                        <strong>Select Companies</strong>
+                        <p class="text-muted small mb-0">Choose companies to get quotes from</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-start">
+                    <div class="rounded-circle bg-success text-white p-2 me-3" style="min-width: 32px; text-align: center;">4</div>
+                    <div>
+                        <strong>Review & Send</strong>
+                        <p class="text-muted small mb-0">Review quotes and send to customer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="bi bi-lightbulb"></i> Tips
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-2">Quotes are auto-scored based on affordability, coverage, and company rating</li>
+                    <li class="mb-2">Customers receive email notification when quotes are generated</li>
+                    <li>Top 3 quotes are shown as recommendations</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Modal -->
+<div class="modal fade" id="resultsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle"></i> Quotes Generated Successfully!</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="resultsContent">
+                <!-- Results will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'backoffice_quotes' %}" class="btn btn-primary">View All Quotes</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Coverages and addons data from server
+const coveragesData = {{ coverages_json|safe }};
+const addonsData = {{ addons_json|safe }};
+
+document.getElementById('application').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const typeId = option.dataset.type;
+    const coverage = option.dataset.coverage;
+    const tenure = option.dataset.tenure;
+    const appText = option.text;
+    
+    if (this.value) {
+        // Show application details
+        document.getElementById('applicationDetails').style.display = 'block';
+        document.getElementById('detailType').textContent = appText.split('(')[1]?.replace(')', '') || '-';
+        document.getElementById('detailCoverage').textContent = coverage ? '₹' + parseInt(coverage).toLocaleString() : '-';
+        document.getElementById('detailTenure').textContent = tenure ? tenure + ' months' : '-';
+        document.getElementById('detailCustomer').textContent = appText.split(' - ')[1]?.split(' (')[0] || '-';
+        
+        // Load coverages for this type
+        loadCoverages(typeId);
+        loadAddons(typeId);
+    } else {
+        document.getElementById('applicationDetails').style.display = 'none';
+        document.getElementById('coveragesList').innerHTML = '<p class="text-muted mb-0">Select an application to see available coverages</p>';
+        document.getElementById('addonsList').innerHTML = '<p class="text-muted mb-0">Select an application to see available add-ons</p>';
+    }
+});
+
+function loadCoverages(typeId) {
+    const typeCoverages = coveragesData.filter(c => c.insurance_type == typeId);
+    let html = '';
+    
+    if (typeCoverages.length === 0) {
+        html = '<p class="text-muted mb-0">No coverages available for this insurance type</p>';
+    } else {
+        typeCoverages.forEach(c => {
+            const checked = c.is_mandatory ? 'checked disabled' : '';
+            html += `
+                <div class="form-check">
+                    <input class="form-check-input coverage-checkbox" type="checkbox" value="${c.id}" id="coverage${c.id}" ${checked}>
+                    <label class="form-check-label" for="coverage${c.id}">
+                        ${c.coverage_name}
+                        ${c.is_mandatory ? '<span class="badge bg-danger ms-1">Required</span>' : ''}
+                        <small class="text-muted d-block">Base premium: ₹${c.base_premium_per_unit}</small>
+                    </label>
+                </div>
+            `;
+        });
+    }
+    
+    document.getElementById('coveragesList').innerHTML = html;
+}
+
+function loadAddons(typeId) {
+    const typeAddons = addonsData.filter(a => a.insurance_type == typeId);
+    let html = '';
+    
+    if (typeAddons.length === 0) {
+        html = '<p class="text-muted mb-0">No add-ons available for this insurance type</p>';
+    } else {
+        typeAddons.forEach(a => {
+            html += `
+                <div class="form-check">
+                    <input class="form-check-input addon-checkbox" type="checkbox" value="${a.id}" id="addon${a.id}">
+                    <label class="form-check-label" for="addon${a.id}">
+                        ${a.addon_name}
+                        <small class="text-muted d-block">+${a.premium_percentage}% of base premium</small>
+                    </label>
+                </div>
+            `;
+        });
+    }
+    
+    document.getElementById('addonsList').innerHTML = html;
+}
+
+// Select all companies toggle
+document.getElementById('selectAllCompanies').addEventListener('change', function() {
+    document.querySelectorAll('.company-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+    });
+});
+
+// Form submission
+document.getElementById('generateQuoteForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const applicationId = document.getElementById('application').value;
+    if (!applicationId) {
+        alert('Please select an application');
+        return;
+    }
+    
+    const coverageIds = [...document.querySelectorAll('.coverage-checkbox:checked')].map(cb => parseInt(cb.value));
+    const addonIds = [...document.querySelectorAll('.addon-checkbox:checked')].map(cb => parseInt(cb.value));
+    const companyIds = [...document.querySelectorAll('.company-checkbox:checked')].map(cb => parseInt(cb.value));
+    
+    if (companyIds.length === 0) {
+        alert('Please select at least one insurance company');
+        return;
+    }
+    
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+    
+    try {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        const response = await fetch('/api/v1/quotes/generate-for-application/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                application_id: parseInt(applicationId),
+                coverage_ids: coverageIds,
+                addon_ids: addonIds,
+                company_ids: companyIds
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showResults(result);
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.error || JSON.stringify(error)));
+        }
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-calculator"></i> Generate Quotes';
+    }
+});
+
+function showResults(result) {
+    let html = `
+        <div class="alert alert-success">
+            <strong>${result.message}</strong>
+        </div>
+        <h6>Top Recommendations:</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Company</th>
+                        <th>Premium</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    result.recommendations.forEach(rec => {
+        html += `
+            <tr>
+                <td><span class="badge bg-${rec.recommendation_rank === 1 ? 'success' : 'secondary'}">#${rec.recommendation_rank}</span></td>
+                <td>${rec.recommended_quote?.insurance_company?.company_name || '-'}</td>
+                <td>₹${rec.recommended_quote?.total_premium_with_gst?.toLocaleString() || '-'}</td>
+                <td>${rec.suitability_score}/100</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small">Customer has been notified via email.</p>
+    `;
+    
+    document.getElementById('resultsContent').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('resultsModal')).show();
+}
+</script>
+{% endblock %}

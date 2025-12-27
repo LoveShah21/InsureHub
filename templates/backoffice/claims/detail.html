@@ -380,7 +380,7 @@
             alert('Please provide a rejection reason.');
             return;
         }
-        updateClaimStatus('reject', { reason: reason });
+        updateClaimStatus('reject', { rejection_reason: reason });
     });
 </script>
 {% endblock %}

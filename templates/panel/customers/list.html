@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Customers Management - Admin{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-shield"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_coverage_types' %}">
+        <i class="bi bi-layers"></i> Coverages
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_rider_addons' %}">
+        <i class="bi bi-plus-circle"></i> Add-ons
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_companies' %}">
+        <i class="bi bi-building"></i> Companies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_policies' %}">
+        <i class="bi bi-file-earmark-lock"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_customers' %}">
+        <i class="bi bi-person-badge"></i> Customers
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Customers Management{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ stats.total }}</h3>
+                        <small>Total Customers</small>
+                    </div>
+                    <i class="bi bi-people display-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ stats.with_policies }}</h3>
+                        <small>With Active Policies</small>
+                    </div>
+                    <i class="bi bi-shield-check display-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ stats.kyc_verified }}</h3>
+                        <small>KYC Verified</small>
+                    </div>
+                    <i class="bi bi-check-circle display-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Search by name, email, phone..." value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-2">
+                <select name="kyc_status" class="form-select">
+                    <option value="">All KYC Status</option>
+                    <option value="VERIFIED" {% if request.GET.kyc_status == 'VERIFIED' %}selected{% endif %}>Verified</option>
+                    <option value="PENDING" {% if request.GET.kyc_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                    <option value="REJECTED" {% if request.GET.kyc_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="has_policies" class="form-select">
+                    <option value="">All</option>
+                    <option value="yes" {% if request.GET.has_policies == 'yes' %}selected{% endif %}>With Policies</option>
+                    <option value="no" {% if request.GET.has_policies == 'no' %}selected{% endif %}>Without Policies</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a href="{% url 'admin_customers' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Customers Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Contact</th>
+                        <th>KYC Status</th>
+                        <th>Applications</th>
+                        <th>Policies</th>
+                        <th>Claims</th>
+                        <th>Member Since</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>
+                            <strong>{{ customer.user.get_full_name|default:customer.user.email }}</strong>
+                            <br><small class="text-muted">{{ customer.user.email }}</small>
+                        </td>
+                        <td>{{ customer.phone_number|default:"-" }}</td>
+                        <td>
+                            <span class="badge bg-{% if customer.kyc_status == 'VERIFIED' %}success{% elif customer.kyc_status == 'REJECTED' %}danger{% else %}warning{% endif %}">
+                                {{ customer.kyc_status|default:"PENDING" }}
+                            </span>
+                        </td>
+                        <td>{{ customer.applications_count }}</td>
+                        <td>{{ customer.policies_count }}</td>
+                        <td>{{ customer.claims_count }}</td>
+                        <td>{{ customer.user.date_joined|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'admin_user_detail' customer.user.pk %}" class="btn btn-outline-primary" title="View User">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No customers found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

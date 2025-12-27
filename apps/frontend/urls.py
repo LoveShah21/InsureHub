@@ -35,6 +35,7 @@ urlpatterns = [
     path('customer/claims/new/', views.CustomerClaimCreateView.as_view(), name='customer_claim_create'),
     path('customer/claims/<int:pk>/', views.CustomerClaimDetailView.as_view(), name='customer_claim_detail'),
     path('customer/profile/', views.CustomerProfileView.as_view(), name='customer_profile'),
+    path('customer/notifications/', views.CustomerNotificationsView.as_view(), name='customer_notifications'),
     path('customer/explore/', views.PolicyExploreView.as_view(), name='policy_explore'),
     path('customer/insurance/<int:pk>/', views.InsuranceTypeDetailView.as_view(), name='insurance_type_detail'),
     
@@ -42,6 +43,9 @@ urlpatterns = [
     path('backoffice/dashboard/', views.BackofficeDashboardView.as_view(), name='backoffice_dashboard'),
     path('backoffice/applications/', views.BackofficeApplicationListView.as_view(), name='backoffice_applications'),
     path('backoffice/applications/<int:pk>/', views.BackofficeApplicationDetailView.as_view(), name='backoffice_application_detail'),
+    path('backoffice/quotes/', views.BackofficeQuoteListView.as_view(), name='backoffice_quotes'),
+    path('backoffice/quotes/create/', views.BackofficeQuoteCreateView.as_view(), name='backoffice_quote_create'),
+    path('backoffice/quotes/<int:pk>/', views.BackofficeQuoteDetailView.as_view(), name='backoffice_quote_detail'),
     path('backoffice/claims/', views.BackofficeClaimListView.as_view(), name='backoffice_claims'),
     path('backoffice/claims/<int:pk>/', views.BackofficeClaimDetailView.as_view(), name='backoffice_claim_detail'),
     
@@ -50,9 +54,13 @@ urlpatterns = [
     path('panel/users/', views.AdminUserListView.as_view(), name='admin_users'),
     path('panel/users/<int:pk>/', views.AdminUserDetailView.as_view(), name='admin_user_detail'),
     path('panel/catalog/types/', views.AdminInsuranceTypeListView.as_view(), name='admin_insurance_types'),
+    path('panel/catalog/coverages/', views.AdminCoverageTypeListView.as_view(), name='admin_coverage_types'),
+    path('panel/catalog/addons/', views.AdminRiderAddonListView.as_view(), name='admin_rider_addons'),
     path('panel/catalog/companies/', views.AdminCompanyListView.as_view(), name='admin_companies'),
+    path('panel/quotes/', views.AdminQuoteListView.as_view(), name='admin_quotes'),
     path('panel/policies/', views.AdminPolicyListView.as_view(), name='admin_policies'),
     path('panel/payments/', views.AdminPaymentListView.as_view(), name='admin_payments'),
+    path('panel/customers/', views.AdminCustomerListView.as_view(), name='admin_customers'),
     
     # Configuration Management
     path('panel/config/premium-slabs/', views.AdminPremiumSlabListView.as_view(), name='admin_premium_slabs'),

@@ -344,6 +344,14 @@ def verify_razorpay_payment(request):
             notification_service.notify_policy_issued(policy)
         except Exception:
             pass  # Don't fail payment for notification errors
+        
+        # Send email notifications
+        try:
+            from apps.notifications.email_service import send_payment_success_email, send_policy_issued_email
+            send_payment_success_email(payment, policy)
+            send_policy_issued_email(policy)
+        except Exception:
+            pass  # Don't fail payment for email errors
     
     return Response({
         'success': True,

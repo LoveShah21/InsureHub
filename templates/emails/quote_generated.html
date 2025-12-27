@@ -1,0 +1,46 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Quotes Ready - InsureHub{% endblock %}
+
+{% block content %}
+<p class="greeting">Hello {{ customer_name }},</p>
+
+<p class="message">
+    Great news! We have generated insurance quotes for your application. 
+    Our experts have carefully reviewed your requirements and prepared personalized 
+    offers from top insurance companies.
+</p>
+
+<div class="highlight-box">
+    <div class="label">Application Number</div>
+    <div class="value">{{ application_number }}</div>
+</div>
+
+<table class="info-table">
+    <tr>
+        <td>Insurance Type</td>
+        <td>{{ insurance_type }}</td>
+    </tr>
+    <tr>
+        <td>Quotes Generated</td>
+        <td>{{ quote_count }} quotes</td>
+    </tr>
+</table>
+
+<p class="message">
+    Login to your InsureHub account to compare quotes and choose the best 
+    option for your needs. Our recommendation engine has ranked these quotes 
+    based on coverage, affordability, and company reputation.
+</p>
+
+<div style="text-align: center;">
+    <a href="http://{{ login_url }}/customer/quotes/" class="btn">
+        View & Compare Quotes
+    </a>
+</div>
+
+<p class="message" style="margin-top: 30px; font-size: 14px; color: #888;">
+    <strong>Tip:</strong> Quotes are valid for 30 days. Don't miss out on securing 
+    the best coverage for your needs!
+</p>
+{% endblock %}

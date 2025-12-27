@@ -1,25 +1,25 @@
 # Django Core
-Django==4.2.7
-djangorestframework==3.14.0
+Django
+djangorestframework
 
 # Authentication
-djangorestframework-simplejwt==5.3.0
+djangorestframework-simplejwt
 
 # Database
-mysqlclient==2.2.0
+mysqlclient
 
 # CORS
-django-cors-headers==4.3.0
+django-cors-headers
 
 # Environment Variables
-python-decouple==3.8
+python-decouple
 
 # Utilities
-Pillow>=10.2.0
-python-dateutil==2.8.2
+Pillow
+python-dateutil
 
 # Payment Gateway
-razorpay==1.4.1
+razorpay
 
 # PDF Generation
-weasyprint==60.1
+weasyprint

@@ -187,6 +187,11 @@ class CustomerApplicationDetailView(CustomerRequiredMixin, DetailView):
     def get_queryset(self):
         customer = CustomerProfile.objects.get(user=self.request.user)
         return InsuranceApplication.objects.filter(customer=customer)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['documents'] = self.object.documents.all().order_by('-uploaded_at')
+        return context
 
 
 class CustomerQuoteListView(CustomerRequiredMixin, ListView):
@@ -282,6 +287,28 @@ class CustomerClaimDetailView(CustomerRequiredMixin, DetailView):
     def get_queryset(self):
         customer = CustomerProfile.objects.get(user=self.request.user)
         return Claim.objects.filter(customer=customer)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['documents'] = self.object.documents.all().order_by('-uploaded_at')
+        return context
+
+
+class CustomerNotificationsView(CustomerRequiredMixin, TemplateView):
+    """View all notifications for customer."""
+    template_name = 'customer/notifications.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.notifications.models import Notification
+        
+        notifications = Notification.objects.filter(
+            user=self.request.user
+        ).order_by('-created_at')[:100]
+        
+        context['notifications'] = notifications
+        context['unread_count'] = notifications.filter(is_read=False).count()
+        return context
 
 
 class CustomerProfileView(CustomerRequiredMixin, TemplateView):
@@ -502,6 +529,113 @@ class BackofficeClaimDetailView(BackofficeRequiredMixin, DetailView):
         return context
 
 
+class BackofficeQuoteListView(BackofficeRequiredMixin, ListView):
+    """List all quotes for management."""
+    template_name = 'backoffice/quotes/list.html'
+    context_object_name = 'quotes'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = Quote.objects.select_related(
+            'customer__user', 'insurance_type', 'insurance_company', 'application'
+        ).order_by('-created_at')
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(quote_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(customer__user__first_name__icontains=search_query) |
+                Q(customer__user__last_name__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query) |
+                Q(insurance_company__company_name__icontains=search_query)
+            )
+        
+        # Filter by status
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filter by insurance type
+        type_filter = self.request.GET.get('insurance_type')
+        if type_filter:
+            queryset = queryset.filter(insurance_type_id=type_filter)
+        
+        # Filter by company
+        company_filter = self.request.GET.get('company')
+        if company_filter:
+            queryset = queryset.filter(insurance_company_id=company_filter)
+        
+        return queryset.distinct()
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        context['companies'] = InsuranceCompany.objects.filter(is_active=True)
+        return context
+
+
+class BackofficeQuoteCreateView(BackofficeRequiredMixin, TemplateView):
+    """Generate new quotes for approved applications."""
+    template_name = 'backoffice/quotes/create.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        import json
+        
+        # Get approved applications that don't have quotes yet or allow regeneration
+        context['approved_applications'] = InsuranceApplication.objects.filter(
+            status='APPROVED'
+        ).select_related('customer__user', 'insurance_type').order_by('-created_at')
+        
+        # Pre-select application from query param
+        context['preselected_app'] = self.request.GET.get('application')
+        if context['preselected_app']:
+            try:
+                context['preselected_app'] = int(context['preselected_app'])
+            except ValueError:
+                context['preselected_app'] = None
+        
+        # Companies for selection
+        context['companies'] = InsuranceCompany.objects.filter(is_active=True)
+        
+        # Coverages and addons as JSON for JavaScript
+        coverages = list(CoverageType.objects.filter(
+            insurance_type__is_active=True
+        ).values('id', 'coverage_name', 'coverage_code', 'insurance_type', 'base_premium_per_unit', 'is_mandatory'))
+        context['coverages_json'] = json.dumps(coverages, default=str)
+        
+        addons = list(RiderAddon.objects.filter(
+            insurance_type__is_active=True
+        ).values('id', 'addon_name', 'addon_code', 'insurance_type', 'premium_percentage'))
+        context['addons_json'] = json.dumps(addons, default=str)
+        
+        return context
+
+
+class BackofficeQuoteDetailView(BackofficeRequiredMixin, DetailView):
+    """View and manage quote details."""
+    template_name = 'backoffice/quotes/detail.html'
+    context_object_name = 'quote'
+    model = Quote
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        quote = self.object
+        
+        # Get coverages and addons
+        context['coverages'] = quote.coverages.select_related('coverage_type').all()
+        context['addons'] = quote.addons.select_related('addon').all()
+        
+        # Get related quotes for same application
+        context['related_quotes'] = Quote.objects.filter(
+            application=quote.application
+        ).select_related('insurance_company').order_by('-overall_score')
+        
+        return context
+
+
 # ============== Custom Admin Panel ==============
 
 class AdminDashboardView(AdminRequiredMixin, TemplateView):
@@ -607,6 +741,79 @@ class AdminInsuranceTypeListView(AdminRequiredMixin, ListView):
         return types_with_data
 
 
+class AdminCoverageTypeListView(AdminRequiredMixin, ListView):
+    """Manage coverage types with base premium."""
+    template_name = 'panel/catalog/coverages.html'
+    context_object_name = 'coverages'
+    
+    def get_queryset(self):
+        from apps.catalog.models import CoverageType
+        queryset = CoverageType.objects.select_related('insurance_type').order_by(
+            'insurance_type', 'coverage_name'
+        )
+        
+        # Filter by insurance type
+        type_id = self.request.GET.get('type')
+        if type_id:
+            queryset = queryset.filter(insurance_type_id=type_id)
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(coverage_name__icontains=search_query) |
+                Q(coverage_code__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query)
+            )
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle CRUD operations for coverage types."""
+        from apps.catalog.models import CoverageType
+        from decimal import Decimal
+        from django.contrib import messages
+        
+        action = request.POST.get('action', 'create')
+        coverage_id = request.POST.get('coverage_id')
+        
+        try:
+            if action == 'create':
+                CoverageType.objects.create(
+                    coverage_name=request.POST.get('coverage_name'),
+                    coverage_code=request.POST.get('coverage_code'),
+                    insurance_type_id=request.POST.get('insurance_type'),
+                    description=request.POST.get('description', ''),
+                    base_premium_per_unit=Decimal(request.POST.get('base_premium_per_unit', '0')),
+                    unit_of_measurement=request.POST.get('unit_of_measurement', 'per policy'),
+                    is_mandatory=request.POST.get('is_mandatory') == 'on'
+                )
+                messages.success(request, 'Coverage type created successfully.')
+            
+            elif action == 'update' and coverage_id:
+                coverage = CoverageType.objects.get(id=coverage_id)
+                coverage.coverage_name = request.POST.get('coverage_name', coverage.coverage_name)
+                coverage.base_premium_per_unit = Decimal(request.POST.get('base_premium_per_unit', coverage.base_premium_per_unit))
+                coverage.description = request.POST.get('description', coverage.description)
+                coverage.is_mandatory = request.POST.get('is_mandatory') == 'on'
+                coverage.save()
+                messages.success(request, 'Coverage type updated successfully.')
+            
+            elif action == 'delete' and coverage_id:
+                CoverageType.objects.filter(id=coverage_id).delete()
+                messages.success(request, 'Coverage type deleted successfully.')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('admin_coverage_types')
+
+
 class AdminCompanyListView(AdminRequiredMixin, ListView):
     """Manage insurance companies with search."""
     template_name = 'panel/catalog/companies.html'
@@ -693,6 +900,190 @@ class AdminPaymentListView(AdminRequiredMixin, ListView):
         return queryset.order_by('-created_at')
 
 
+class AdminQuoteListView(AdminRequiredMixin, ListView):
+    """View all quotes with search and filters."""
+    template_name = 'panel/quotes/list.html'
+    context_object_name = 'quotes'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = Quote.objects.select_related(
+            'customer__user', 'insurance_type', 'insurance_company'
+        ).all()
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(quote_number__icontains=search_query) |
+                Q(customer__user__email__icontains=search_query) |
+                Q(customer__user__first_name__icontains=search_query) |
+                Q(customer__user__last_name__icontains=search_query) |
+                Q(insurance_type__type_name__icontains=search_query) |
+                Q(insurance_company__company_name__icontains=search_query)
+            )
+        
+        # Status filter
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Insurance type filter
+        type_filter = self.request.GET.get('insurance_type')
+        if type_filter:
+            queryset = queryset.filter(insurance_type_id=type_filter)
+        
+        # Company filter
+        company_filter = self.request.GET.get('company')
+        if company_filter:
+            queryset = queryset.filter(insurance_company_id=company_filter)
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        context['companies'] = InsuranceCompany.objects.filter(is_active=True)
+        
+        # Stats
+        context['stats'] = {
+            'total': Quote.objects.count(),
+            'generated': Quote.objects.filter(status='GENERATED').count(),
+            'sent': Quote.objects.filter(status='SENT').count(),
+            'accepted': Quote.objects.filter(status='ACCEPTED').count(),
+        }
+        return context
+
+
+class AdminCustomerListView(AdminRequiredMixin, ListView):
+    """View all customers with search and filters."""
+    template_name = 'panel/customers/list.html'
+    context_object_name = 'customers'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = CustomerProfile.objects.select_related('user').annotate(
+            applications_count=Count('applications'),
+            policies_count=Count('policies'),
+            claims_count=Count('claims')
+        )
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(user__email__icontains=search_query) |
+                Q(user__first_name__icontains=search_query) |
+                Q(user__last_name__icontains=search_query) |
+                Q(phone_number__icontains=search_query)
+            )
+        
+        # KYC status filter
+        kyc_status = self.request.GET.get('kyc_status')
+        if kyc_status:
+            queryset = queryset.filter(kyc_status=kyc_status)
+        
+        # Has policies filter
+        has_policies = self.request.GET.get('has_policies')
+        if has_policies == 'yes':
+            queryset = queryset.filter(policies_count__gt=0)
+        elif has_policies == 'no':
+            queryset = queryset.filter(policies_count=0)
+        
+        return queryset.order_by('-user__date_joined')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Stats
+        total = CustomerProfile.objects.count()
+        with_policies = CustomerProfile.objects.filter(policies__isnull=False).distinct().count()
+        kyc_verified = CustomerProfile.objects.filter(kyc_status='VERIFIED').count()
+        
+        context['stats'] = {
+            'total': total,
+            'with_policies': with_policies,
+            'kyc_verified': kyc_verified
+        }
+        return context
+
+
+class AdminRiderAddonListView(AdminRequiredMixin, ListView):
+    """Manage rider add-ons."""
+    template_name = 'panel/catalog/addons.html'
+    context_object_name = 'addons'
+    
+    def get_queryset(self):
+        queryset = RiderAddon.objects.select_related('insurance_type').order_by(
+            'insurance_type', 'addon_name'
+        )
+        
+        # Search functionality
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(addon_name__icontains=search_query) |
+                Q(addon_code__icontains=search_query)
+            )
+        
+        # Insurance type filter
+        type_id = self.request.GET.get('type')
+        if type_id:
+            queryset = queryset.filter(insurance_type_id=type_id)
+        
+        # Status filter
+        is_active = self.request.GET.get('is_active')
+        if is_active == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active == 'false':
+            queryset = queryset.filter(is_active=False)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle CRUD operations for rider add-ons."""
+        from decimal import Decimal
+        from django.contrib import messages
+        
+        action = request.POST.get('action', 'create')
+        addon_id = request.POST.get('addon_id')
+        
+        try:
+            if action == 'create':
+                RiderAddon.objects.create(
+                    addon_name=request.POST.get('addon_name'),
+                    addon_code=request.POST.get('addon_code'),
+                    insurance_type_id=request.POST.get('insurance_type'),
+                    description=request.POST.get('description', ''),
+                    premium_percentage=Decimal(request.POST.get('premium_percentage', '0')),
+                    is_active=request.POST.get('is_active') == 'on'
+                )
+                messages.success(request, 'Rider add-on created successfully.')
+            
+            elif action == 'update' and addon_id:
+                addon = RiderAddon.objects.get(id=addon_id)
+                addon.addon_name = request.POST.get('addon_name', addon.addon_name)
+                addon.premium_percentage = Decimal(request.POST.get('premium_percentage', addon.premium_percentage))
+                addon.description = request.POST.get('description', addon.description)
+                addon.is_active = request.POST.get('is_active') == 'on'
+                addon.save()
+                messages.success(request, 'Rider add-on updated successfully.')
+            
+            elif action == 'delete' and addon_id:
+                RiderAddon.objects.filter(id=addon_id).delete()
+                messages.success(request, 'Rider add-on deleted successfully.')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('admin_rider_addons')
+
+
 # ============== Admin Configuration Management ==============
 
 class AdminPremiumSlabListView(AdminRequiredMixin, ListView):
@@ -701,7 +1092,7 @@ class AdminPremiumSlabListView(AdminRequiredMixin, ListView):
     context_object_name = 'slabs'
     
     def get_queryset(self):
-        from apps.catalog.models import PremiumSlab
+        from apps.catalog.config_models import PremiumSlab
         queryset = PremiumSlab.objects.select_related('insurance_type').order_by(
             'insurance_type', 'min_coverage_amount'
         )
@@ -724,6 +1115,51 @@ class AdminPremiumSlabListView(AdminRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
         return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle CRUD operations via POST."""
+        from apps.catalog.config_models import PremiumSlab
+        from decimal import Decimal
+        from django.contrib import messages
+        
+        action = request.POST.get('action', 'create')
+        slab_id = request.POST.get('slab_id')
+        
+        try:
+            if action == 'create':
+                PremiumSlab.objects.create(
+                    insurance_type_id=request.POST.get('insurance_type'),
+                    slab_name=request.POST.get('slab_name'),
+                    min_coverage_amount=Decimal(request.POST.get('min_coverage_amount', '0')),
+                    max_coverage_amount=Decimal(request.POST.get('max_coverage_amount', '0')),
+                    base_premium=Decimal(request.POST.get('base_premium', '0')),
+                    percentage_markup=Decimal(request.POST.get('percentage_markup', '0')),
+                    is_active=True
+                )
+                messages.success(request, 'Premium slab created successfully.')
+            
+            elif action == 'update' and slab_id:
+                slab = PremiumSlab.objects.get(id=slab_id)
+                slab.slab_name = request.POST.get('slab_name', slab.slab_name)
+                slab.base_premium = Decimal(request.POST.get('base_premium', slab.base_premium))
+                slab.percentage_markup = Decimal(request.POST.get('percentage_markup', slab.percentage_markup))
+                slab.save()
+                messages.success(request, 'Premium slab updated successfully.')
+            
+            elif action == 'toggle' and slab_id:
+                slab = PremiumSlab.objects.get(id=slab_id)
+                slab.is_active = not slab.is_active
+                slab.save()
+                messages.success(request, f'Premium slab {"activated" if slab.is_active else "deactivated"}.')
+            
+            elif action == 'delete' and slab_id:
+                PremiumSlab.objects.filter(id=slab_id).delete()
+                messages.success(request, 'Premium slab deleted successfully.')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('admin_premium_slabs')
 
 
 class AdminDiscountRuleListView(AdminRequiredMixin, ListView):
@@ -732,7 +1168,7 @@ class AdminDiscountRuleListView(AdminRequiredMixin, ListView):
     context_object_name = 'rules'
     
     def get_queryset(self):
-        from apps.catalog.models import DiscountRule
+        from apps.catalog.config_models import DiscountRule
         queryset = DiscountRule.objects.select_related('insurance_type').order_by(
             '-rule_priority', 'rule_name'
         )
@@ -756,6 +1192,50 @@ class AdminDiscountRuleListView(AdminRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
         return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle CRUD operations for discount rules."""
+        from apps.catalog.config_models import DiscountRule
+        from decimal import Decimal
+        from django.contrib import messages
+        
+        action = request.POST.get('action', 'create')
+        rule_id = request.POST.get('rule_id')
+        
+        try:
+            if action == 'create':
+                DiscountRule.objects.create(
+                    rule_name=request.POST.get('rule_name'),
+                    rule_code=request.POST.get('rule_code'),
+                    insurance_type_id=request.POST.get('insurance_type') or None,
+                    discount_percentage=Decimal(request.POST.get('discount_percentage', '0')),
+                    rule_priority=int(request.POST.get('rule_priority', '0')),
+                    is_combinable=request.POST.get('is_combinable') == 'on',
+                    is_active=True
+                )
+                messages.success(request, 'Discount rule created successfully.')
+            
+            elif action == 'update' and rule_id:
+                rule = DiscountRule.objects.get(id=rule_id)
+                rule.rule_name = request.POST.get('rule_name', rule.rule_name)
+                rule.discount_percentage = Decimal(request.POST.get('discount_percentage', rule.discount_percentage))
+                rule.save()
+                messages.success(request, 'Discount rule updated successfully.')
+            
+            elif action == 'toggle' and rule_id:
+                rule = DiscountRule.objects.get(id=rule_id)
+                rule.is_active = not rule.is_active
+                rule.save()
+                messages.success(request, f'Discount rule {"activated" if rule.is_active else "deactivated"}.')
+            
+            elif action == 'delete' and rule_id:
+                DiscountRule.objects.filter(id=rule_id).delete()
+                messages.success(request, 'Discount rule deleted successfully.')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('admin_discount_rules')
 
 
 class AdminBusinessConfigListView(AdminRequiredMixin, ListView):
@@ -764,7 +1244,7 @@ class AdminBusinessConfigListView(AdminRequiredMixin, ListView):
     context_object_name = 'configs'
     
     def get_queryset(self):
-        from apps.catalog.models import BusinessConfiguration
+        from apps.catalog.config_models import BusinessConfiguration
         queryset = BusinessConfiguration.objects.order_by('config_type', 'config_key')
         
         # Filter by type
@@ -784,9 +1264,50 @@ class AdminBusinessConfigListView(AdminRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from apps.catalog.models import BusinessConfiguration
+        from apps.catalog.config_models import BusinessConfiguration
         context['config_types'] = BusinessConfiguration.CONFIG_TYPE_CHOICES
         return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle CRUD operations for business configuration."""
+        from apps.catalog.config_models import BusinessConfiguration
+        from django.contrib import messages
+        
+        action = request.POST.get('action', 'create')
+        config_id = request.POST.get('config_id')
+        
+        try:
+            if action == 'create':
+                BusinessConfiguration.objects.create(
+                    config_key=request.POST.get('config_key'),
+                    config_value=request.POST.get('config_value'),
+                    config_type=request.POST.get('config_type', 'GENERAL'),
+                    config_description=request.POST.get('config_description', ''),
+                    is_active=True
+                )
+                messages.success(request, 'Configuration created successfully.')
+            
+            elif action == 'update' and config_id:
+                config = BusinessConfiguration.objects.get(id=config_id)
+                config.config_value = request.POST.get('config_value', config.config_value)
+                config.config_description = request.POST.get('config_description', config.config_description)
+                config.save()
+                messages.success(request, 'Configuration updated successfully.')
+            
+            elif action == 'toggle' and config_id:
+                config = BusinessConfiguration.objects.get(id=config_id)
+                config.is_active = not config.is_active
+                config.save()
+                messages.success(request, f'Configuration {"activated" if config.is_active else "deactivated"}.')
+            
+            elif action == 'delete' and config_id:
+                BusinessConfiguration.objects.filter(id=config_id).delete()
+                messages.success(request, 'Configuration deleted successfully.')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('admin_business_config')
 
 
 class AdminEligibilityRuleListView(AdminRequiredMixin, ListView):
@@ -795,7 +1316,7 @@ class AdminEligibilityRuleListView(AdminRequiredMixin, ListView):
     context_object_name = 'rules'
     
     def get_queryset(self):
-        from apps.catalog.models import PolicyEligibilityRule
+        from apps.catalog.config_models import PolicyEligibilityRule
         queryset = PolicyEligibilityRule.objects.select_related('insurance_type').order_by(
             'insurance_type', '-rule_priority'
         )
@@ -811,6 +1332,49 @@ class AdminEligibilityRuleListView(AdminRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
         return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle CRUD operations for eligibility rules."""
+        from apps.catalog.config_models import PolicyEligibilityRule
+        from django.contrib import messages
+        import json
+        
+        action = request.POST.get('action', 'create')
+        rule_id = request.POST.get('rule_id')
+        
+        try:
+            if action == 'create':
+                # Parse JSON condition if provided
+                condition = request.POST.get('rule_condition', '{}')
+                try:
+                    condition_json = json.loads(condition) if condition else {}
+                except json.JSONDecodeError:
+                    condition_json = {'raw': condition}
+                
+                PolicyEligibilityRule.objects.create(
+                    insurance_type_id=request.POST.get('insurance_type'),
+                    rule_name=request.POST.get('rule_name'),
+                    rule_condition=condition_json,
+                    rule_priority=int(request.POST.get('rule_priority', 0)),
+                    error_message=request.POST.get('error_message', ''),
+                    is_active=True
+                )
+                messages.success(request, 'Eligibility rule created successfully.')
+            
+            elif action == 'toggle' and rule_id:
+                rule = PolicyEligibilityRule.objects.get(id=rule_id)
+                rule.is_active = not rule.is_active
+                rule.save()
+                messages.success(request, f'Eligibility rule {"activated" if rule.is_active else "deactivated"}.')
+            
+            elif action == 'delete' and rule_id:
+                PolicyEligibilityRule.objects.filter(id=rule_id).delete()
+                messages.success(request, 'Eligibility rule deleted successfully.')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('admin_eligibility_rules')
 
 
 class AdminClaimThresholdListView(AdminRequiredMixin, ListView):
@@ -819,16 +1383,55 @@ class AdminClaimThresholdListView(AdminRequiredMixin, ListView):
     context_object_name = 'thresholds'
     
     def get_queryset(self):
-        from apps.catalog.models import ClaimApprovalThreshold
+        from apps.catalog.config_models import ClaimApprovalThreshold
         return ClaimApprovalThreshold.objects.select_related(
             'insurance_type', 'required_approver_role'
         ).order_by('insurance_type', 'min_claim_amount')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from apps.catalog.config_models import ClaimApprovalThreshold
         context['insurance_types'] = InsuranceType.objects.filter(is_active=True)
         context['roles'] = Role.objects.all()
+        context['approval_levels'] = ClaimApprovalThreshold.APPROVAL_LEVEL_CHOICES
         return context
+    
+    def post(self, request, *args, **kwargs):
+        """Handle CRUD operations for claim thresholds."""
+        from apps.catalog.config_models import ClaimApprovalThreshold
+        from decimal import Decimal
+        from django.contrib import messages
+        
+        action = request.POST.get('action', 'create')
+        threshold_id = request.POST.get('threshold_id')
+        
+        try:
+            if action == 'create':
+                ClaimApprovalThreshold.objects.create(
+                    insurance_type_id=request.POST.get('insurance_type'),
+                    approval_level=request.POST.get('approval_level'),
+                    min_claim_amount=Decimal(request.POST.get('min_claim_amount', '0')),
+                    max_claim_amount=Decimal(request.POST.get('max_claim_amount', '9999999999.99')),
+                    required_approver_role_id=request.POST.get('required_approver_role'),
+                    max_processing_days=int(request.POST.get('max_processing_days', 15)),
+                    is_active=True
+                )
+                messages.success(request, 'Claim threshold created successfully.')
+            
+            elif action == 'toggle' and threshold_id:
+                threshold = ClaimApprovalThreshold.objects.get(id=threshold_id)
+                threshold.is_active = not threshold.is_active
+                threshold.save()
+                messages.success(request, f'Claim threshold {"activated" if threshold.is_active else "deactivated"}.')
+            
+            elif action == 'delete' and threshold_id:
+                ClaimApprovalThreshold.objects.filter(id=threshold_id).delete()
+                messages.success(request, 'Claim threshold deleted successfully.')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+        
+        return redirect('admin_claim_thresholds')
 
 
 class AdminAnalyticsDashboardView(AdminRequiredMixin, TemplateView):

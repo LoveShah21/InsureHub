@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'customer_notifications' %}">
+        <i class="bi bi-bell"></i> Notifications
+        {% if unread_count > 0 %}
+        <span class="badge bg-danger ms-1">{{ unread_count }}</span>
+        {% endif %}
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Notifications{% endblock %}
+
+{% block topbar_right %}
+{% if unread_count > 0 %}
+<button class="btn btn-outline-primary" id="markAllRead">
+    <i class="bi bi-check-all"></i> Mark All as Read
+</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bell"></i> All Notifications</span>
+                <span class="badge bg-primary">{{ notifications|length }} total</span>
+            </div>
+            <div class="card-body p-0">
+                {% if notifications %}
+                <div class="list-group list-group-flush">
+                    {% for notif in notifications %}
+                    <div class="list-group-item list-group-item-action {% if not notif.is_read %}bg-light{% endif %}" 
+                         data-notification-id="{{ notif.id }}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div class="d-flex align-items-start">
+                                <div class="rounded-circle p-2 me-3 
+                                    {% if notif.notification_type == 'SUCCESS' %}bg-success
+                                    {% elif notif.notification_type == 'WARNING' %}bg-warning
+                                    {% elif notif.notification_type == 'ERROR' %}bg-danger
+                                    {% else %}bg-info{% endif %} text-white">
+                                    {% if notif.category == 'APPLICATION' %}
+                                    <i class="bi bi-file-earmark-text"></i>
+                                    {% elif notif.category == 'QUOTE' %}
+                                    <i class="bi bi-calculator"></i>
+                                    {% elif notif.category == 'POLICY' %}
+                                    <i class="bi bi-shield-check"></i>
+                                    {% elif notif.category == 'CLAIM' %}
+                                    <i class="bi bi-clipboard-check"></i>
+                                    {% elif notif.category == 'PAYMENT' %}
+                                    <i class="bi bi-credit-card"></i>
+                                    {% else %}
+                                    <i class="bi bi-bell"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 {% if not notif.is_read %}fw-bold{% endif %}">
+                                        {{ notif.title }}
+                                    </h6>
+                                    <p class="mb-1 text-muted small">{{ notif.message }}</p>
+                                    {% if notif.action_url %}
+                                    <a href="{{ notif.action_url }}" class="btn btn-sm btn-outline-primary mt-1">
+                                        View Details
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ notif.created_at|timesince }} ago</small>
+                                {% if not notif.is_read %}
+                                <br><span class="badge bg-primary">New</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-bell-slash display-1 text-muted"></i>
+                    <h5 class="mt-3">No Notifications</h5>
+                    <p class="text-muted">You're all caught up!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="bi bi-bar-chart"></i> Summary
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Notifications</span>
+                    <strong>{{ notifications|length }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Unread</span>
+                    <strong class="text-primary">{{ unread_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Read</span>
+                    <strong class="text-muted">{{ notifications|length|add:unread_count|stringformat:"i"|add:"-"|add:unread_count }}</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-gear"></i> Preferences
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-0">
+                    You receive notifications for: application updates, quote generation, 
+                    policy issuance, claim status changes, and payment confirmations.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mark notification as read on click
+document.querySelectorAll('[data-notification-id]').forEach(item => {
+    item.addEventListener('click', async function() {
+        const id = this.dataset.notificationId;
+        if (this.classList.contains('bg-light')) {
+            try {
+                await fetch('/api/v1/notifications/' + id + '/mark-read/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    credentials: 'include'
+                });
+                this.classList.remove('bg-light');
+                this.querySelector('.badge.bg-primary')?.remove();
+            } catch (err) {
+                console.error('Error marking as read:', err);
+            }
+        }
+    });
+});
+
+// Mark all as read
+document.getElementById('markAllRead')?.addEventListener('click', async function() {
+    try {
+        const response = await fetch('/api/v1/notifications/mark-all-read/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        }
+    } catch (err) {
+        console.error('Error:', err);
+    }
+});
+</script>
+{% endblock %}

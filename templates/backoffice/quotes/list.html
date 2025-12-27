@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Quotes - Backoffice{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'backoffice_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'backoffice_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Quote Management{% endblock %}
+
+{% block topbar_right %}
+<a href="{% url 'backoffice_quote_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus"></i> Generate New Quotes
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Search & Filter Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Search by quote #, customer, company..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    <option value="GENERATED" {% if request.GET.status == 'GENERATED' %}selected{% endif %}>Generated</option>
+                    <option value="SENT" {% if request.GET.status == 'SENT' %}selected{% endif %}>Sent</option>
+                    <option value="ACCEPTED" {% if request.GET.status == 'ACCEPTED' %}selected{% endif %}>Accepted</option>
+                    <option value="REJECTED" {% if request.GET.status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                    <option value="EXPIRED" {% if request.GET.status == 'EXPIRED' %}selected{% endif %}>Expired</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="insurance_type">
+                    <option value="">All Types</option>
+                    {% for type in insurance_types %}
+                    <option value="{{ type.id }}" {% if request.GET.insurance_type == type.id|stringformat:"i" %}selected{% endif %}>{{ type.type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="company">
+                    <option value="">All Companies</option>
+                    {% for company in companies %}
+                    <option value="{{ company.id }}" {% if request.GET.company == company.id|stringformat:"i" %}selected{% endif %}>{{ company.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Quotes List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calculator"></i> All Quotes</span>
+        <small class="text-muted">{{ quotes|length }} result(s)</small>
+    </div>
+    <div class="card-body">
+        {% if quotes %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Quote #</th>
+                        <th>Customer</th>
+                        <th>Insurance Type</th>
+                        <th>Company</th>
+                        <th>Premium</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for quote in quotes %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'backoffice_quote_detail' quote.pk %}" class="text-decoration-none">
+                                <strong>{{ quote.quote_number }}</strong>
+                            </a>
+                        </td>
+                        <td>
+                            {{ quote.customer.user.get_full_name|default:quote.customer.user.email }}
+                            <br><small class="text-muted">{{ quote.customer.user.email }}</small>
+                        </td>
+                        <td>{{ quote.insurance_type.type_name }}</td>
+                        <td>{{ quote.insurance_company.company_name }}</td>
+                        <td>
+                            <strong>₹{{ quote.total_premium_with_gst|floatformat:0 }}</strong>
+                            <br><small class="text-muted">Sum: ₹{{ quote.sum_insured|floatformat:0 }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if quote.overall_score >= 80 %}success{% elif quote.overall_score >= 60 %}warning{% else %}secondary{% endif %}">
+                                {{ quote.overall_score }}/100
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if quote.status == 'ACCEPTED' %}success{% elif quote.status == 'SENT' %}primary{% elif quote.status == 'GENERATED' %}info{% elif quote.status == 'EXPIRED' %}secondary{% else %}danger{% endif %}">
+                                {{ quote.status }}
+                            </span>
+                        </td>
+                        <td>{{ quote.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'backoffice_quote_detail' quote.pk %}" class="btn btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if quote.status == 'GENERATED' %}
+                                <button class="btn btn-outline-success" onclick="sendToCustomer({{ quote.id }})" title="Send to Customer">
+                                    <i class="bi bi-send"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-calculator display-1 text-muted"></i>
+            <h5 class="mt-3">No Quotes Found</h5>
+            <p class="text-muted">No quotes match your search criteria.</p>
+            <a href="{% url 'backoffice_quote_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> Generate New Quotes
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+           document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
+}
+
+async function sendToCustomer(quoteId) {
+    if (!confirm('Send this quote to the customer? They will receive an email notification.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/v1/quotes/' + quoteId + '/send-to-customer/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            alert('Quote sent to customer successfully!');
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert('Error: ' + (error.error || JSON.stringify(error)));
+        }
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+</script>
+{% endblock %}

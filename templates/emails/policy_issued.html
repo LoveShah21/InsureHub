@@ -1,0 +1,64 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Policy Issued - InsureHub{% endblock %}
+
+{% block content %}
+<p class="greeting">Hello {{ customer_name }},</p>
+
+<p class="message">
+    🎉 <strong>Congratulations!</strong> Your insurance policy has been successfully issued. 
+    You are now covered and protected.
+</p>
+
+<div class="highlight-box" style="background-color: #d4edda; border-left-color: #28a745;">
+    <div class="label" style="color: #155724;">Policy Number</div>
+    <div class="value" style="color: #155724; font-size: 24px;">{{ policy_number }}</div>
+</div>
+
+<table class="info-table">
+    <tr>
+        <td>Insurance Company</td>
+        <td>{{ company_name }}</td>
+    </tr>
+    <tr>
+        <td>Insurance Type</td>
+        <td>{{ insurance_type }}</td>
+    </tr>
+    <tr>
+        <td>Sum Insured</td>
+        <td>{{ sum_insured }}</td>
+    </tr>
+    <tr>
+        <td>Premium Paid</td>
+        <td style="color: #28a745;">{{ total_premium }}</td>
+    </tr>
+    <tr>
+        <td>Coverage Start Date</td>
+        <td>{{ start_date }}</td>
+    </tr>
+    <tr>
+        <td>Coverage End Date</td>
+        <td>{{ end_date }}</td>
+    </tr>
+</table>
+
+<p class="message">
+    Your policy document is now available in your InsureHub account. 
+    You can download it anytime for your records.
+</p>
+
+<div style="text-align: center;">
+    <a href="http://{{ login_url }}/customer/policies/" class="btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+        View My Policy
+    </a>
+</div>
+
+<p class="message" style="margin-top: 30px; font-size: 14px; color: #888;">
+    <strong>What's Next?</strong>
+    <ul style="margin-top: 10px;">
+        <li>Save your policy number for future reference</li>
+        <li>Download and keep a copy of your policy document</li>
+        <li>In case of a claim, visit your dashboard to file a claim</li>
+    </ul>
+</p>
+{% endblock %}

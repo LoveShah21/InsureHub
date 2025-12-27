@@ -103,6 +103,7 @@ class ClaimViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         
         action_name = serializer.validated_data['action']
+        old_status = claim.status
         
         try:
             if action_name == 'start_review':
@@ -122,12 +123,68 @@ class ClaimViewSet(viewsets.ModelViewSet):
             elif action_name == 'close':
                 claim.close(request.user)
             
+            # Send email notification if status changed
+            if claim.status != old_status:
+                from apps.notifications.email_service import send_claim_status_email
+                send_claim_status_email(claim, old_status)
+            
             return Response({
                 'message': f'Claim {action_name} successful.',
                 'claim': ClaimSerializer(claim).data
             })
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'], url_path='assign-surveyor')
+    def assign_surveyor(self, request, pk=None):
+        """Assign a surveyor to a claim (Backoffice only)."""
+        # Check permission
+        if not request.user.user_roles.filter(
+            role__role_name__in=['ADMIN', 'BACKOFFICE']
+        ).exists():
+            return Response(
+                {'error': 'Backoffice access required.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        claim = self.get_object()
+        surveyor_id = request.data.get('surveyor_id')
+        
+        if not surveyor_id:
+            return Response(
+                {'error': 'surveyor_id is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        try:
+            surveyor = User.objects.get(id=surveyor_id, is_active=True)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Surveyor not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Create assessment record
+        from .models import ClaimAssessment
+        assessment, created = ClaimAssessment.objects.get_or_create(
+            claim=claim,
+            surveyor=surveyor,
+            defaults={'assessment_status': 'PENDING'}
+        )
+        
+        if not created:
+            return Response({
+                'message': 'Surveyor already assigned.',
+                'assessment_id': assessment.id
+            })
+        
+        return Response({
+            'message': f'Surveyor {surveyor.email} assigned successfully.',
+            'assessment_id': assessment.id
+        }, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def upload_document(self, request, pk=None):

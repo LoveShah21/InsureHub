@@ -119,6 +119,13 @@ class Quote(models.Model):
     )
     accepted_at = models.DateTimeField(null=True, blank=True)
     
+    # Sent to customer tracking
+    sent_at = models.DateTimeField(null=True, blank=True)
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='sent_quotes'
+    )
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -149,14 +156,35 @@ class Quote(models.Model):
     
     def accept(self):
         """Mark quote as accepted."""
-        if self.status != 'GENERATED':
-            raise ValueError("Only generated quotes can be accepted.")
+        if self.status not in ['GENERATED', 'SENT']:
+            raise ValueError("Only generated or sent quotes can be accepted.")
         if self.is_expired:
             raise ValueError("This quote has expired.")
         
         self.status = 'ACCEPTED'
         self.accepted_at = timezone.now()
         self.save()
+    
+    def send_to_customer(self, sent_by_user):
+        """
+        Mark quote as sent to customer and trigger email notification.
+        
+        Args:
+            sent_by_user: The user (backoffice/admin) sending the quote
+        """
+        if self.status != 'GENERATED':
+            raise ValueError("Only generated quotes can be sent to customers.")
+        if self.is_expired:
+            raise ValueError("This quote has expired.")
+        
+        self.status = 'SENT'
+        self.sent_at = timezone.now()
+        self.sent_by = sent_by_user
+        self.save()
+        
+        # Send email notification
+        from apps.notifications.email_service import send_quote_sent_email
+        send_quote_sent_email(self)
 
 
 class QuoteCoverage(models.Model):

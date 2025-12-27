@@ -1,0 +1,58 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Application Status Update - InsureHub{% endblock %}
+
+{% block content %}
+<p class="greeting">Hello {{ customer_name }},</p>
+
+<p class="message">
+    There's an update on your insurance application. Please review the details below.
+</p>
+
+<div class="highlight-box">
+    <div class="label">Application Number</div>
+    <div class="value">{{ application_number }}</div>
+</div>
+
+<div style="text-align: center; margin: 25px 0;">
+    <span class="status-badge {% if status == 'APPROVED' %}status-approved{% elif status == 'REJECTED' %}status-rejected{% elif status == 'UNDER_REVIEW' %}status-pending{% else %}status-info{% endif %}">
+        {{ status }}
+    </span>
+</div>
+
+<p class="message" style="font-size: 18px; text-align: center; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+    {{ status_message }}
+</p>
+
+<table class="info-table">
+    <tr>
+        <td>Insurance Type</td>
+        <td>{{ insurance_type }}</td>
+    </tr>
+    <tr>
+        <td>Current Status</td>
+        <td>{{ status }}</td>
+    </tr>
+</table>
+
+{% if rejection_reason %}
+<div style="margin: 20px 0; padding: 15px; background-color: #f8d7da; border-radius: 6px; border-left: 4px solid #dc3545;">
+    <strong>Reason for Rejection:</strong>
+    <p style="margin: 10px 0 0 0;">{{ rejection_reason }}</p>
+</div>
+{% endif %}
+
+{% if status == 'APPROVED' %}
+<p class="message" style="padding: 15px; background-color: #d4edda; border-radius: 6px;">
+    🎉 <strong>What's Next?</strong><br>
+    Our team will now generate personalized quotes from multiple insurance companies. 
+    You'll receive another email once your quotes are ready for comparison!
+</p>
+{% endif %}
+
+<div style="text-align: center;">
+    <a href="http://{{ login_url }}/customer/applications/" class="btn">
+        View Application
+    </a>
+</div>
+{% endblock %}

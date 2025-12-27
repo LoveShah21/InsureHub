@@ -355,8 +355,12 @@ class QuoteViewSet(viewsets.ReadOnlyModelViewSet):
         """Accept a quote."""
         quote = self.get_object()
         
-        # Check ownership
-        if quote.customer.user != request.user:
+        # Check ownership or admin
+        is_admin = request.user.user_roles.filter(
+            role__role_name__in=['ADMIN', 'BACKOFFICE']
+        ).exists()
+        
+        if quote.customer.user != request.user and not is_admin:
             return Response(
                 {'error': 'You can only accept your own quotes.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -370,3 +374,236 @@ class QuoteViewSet(viewsets.ReadOnlyModelViewSet):
             })
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'], url_path='send-to-customer')
+    def send_to_customer(self, request, pk=None):
+        """
+        Send a quote to the customer (Backoffice/Admin only).
+        
+        POST /api/v1/quotes/{id}/send-to-customer/
+        
+        This updates the quote status to 'SENT' and triggers an email notification.
+        """
+        # Check permission
+        if not request.user.user_roles.filter(
+            role__role_name__in=['ADMIN', 'BACKOFFICE']
+        ).exists():
+            return Response(
+                {'error': 'Only backoffice or admin can send quotes to customers.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        quote = self.get_object()
+        
+        try:
+            quote.send_to_customer(request.user)
+            return Response({
+                'message': 'Quote sent to customer successfully.',
+                'quote': QuoteSerializer(quote).data
+            })
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'], url_path='generate-for-application')
+    def generate_for_application(self, request):
+        """
+        Generate quotes for an approved application (Backoffice/Admin only).
+        
+        POST /api/v1/quotes/generate-for-application/
+        Body: {
+            "application_id": 123,
+            "coverage_ids": [1, 2, 3],  # optional
+            "addon_ids": [1, 2],  # optional
+            "company_ids": [1, 2, 3]  # optional, defaults to all active companies
+        }
+        """
+        # Check permission
+        if not request.user.user_roles.filter(
+            role__role_name__in=['ADMIN', 'BACKOFFICE']
+        ).exists():
+            return Response(
+                {'error': 'Only backoffice or admin can generate quotes.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        application_id = request.data.get('application_id')
+        coverage_ids = request.data.get('coverage_ids', [])
+        addon_ids = request.data.get('addon_ids', [])
+        company_ids = request.data.get('company_ids', [])
+        
+        if not application_id:
+            return Response(
+                {'error': 'application_id is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            application = InsuranceApplication.objects.select_related(
+                'customer', 'insurance_type'
+            ).get(id=application_id)
+        except InsuranceApplication.DoesNotExist:
+            return Response(
+                {'error': 'Application not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check status
+        if application.status != 'APPROVED':
+            return Response(
+                {'error': 'Quotes can only be generated for approved applications.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get companies
+        if company_ids:
+            companies = InsuranceCompany.objects.filter(id__in=company_ids, is_active=True)
+        else:
+            companies = InsuranceCompany.objects.filter(is_active=True)
+        
+        if not companies.exists():
+            return Response(
+                {'error': 'No insurance companies available.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get coverages and addons for this insurance type
+        type_coverages = CoverageType.objects.filter(
+            insurance_type=application.insurance_type
+        )
+        type_addons = RiderAddon.objects.filter(
+            insurance_type=application.insurance_type
+        )
+        
+        # Use provided IDs or default to mandatory coverages
+        if not coverage_ids:
+            coverage_ids = list(type_coverages.filter(
+                is_mandatory=True
+            ).values_list('id', flat=True))
+        
+        generated_quotes = []
+        
+        for company in companies:
+            # Calculate base premium
+            base_premium = self._calculate_base_premium(
+                application, company, coverage_ids
+            )
+            
+            # Calculate addon premium
+            addon_premium = self._calculate_addon_premium(
+                base_premium, addon_ids
+            )
+            
+            # Risk adjustment
+            risk_adjustment = Decimal('5.00')
+            adjusted_premium = base_premium * (1 + risk_adjustment / 100)
+            
+            # Final premium
+            final_premium = adjusted_premium + addon_premium
+            
+            # GST
+            gst_pct = Decimal('18.00')
+            gst_amount = final_premium * (gst_pct / 100)
+            total_premium = final_premium + gst_amount
+            
+            # Calculate score
+            customer = application.customer
+            scores = calculate_quote_score(
+                premium=total_premium,
+                company=company,
+                selected_coverages=coverage_ids,
+                insurance_type_id=application.insurance_type.id,
+                annual_income=customer.annual_income,
+                budget_min=application.budget_min,
+                budget_max=application.budget_max
+            )
+            
+            # Create quote
+            quote = Quote.objects.create(
+                application=application,
+                customer=customer,
+                insurance_type=application.insurance_type,
+                insurance_company=company,
+                base_premium=base_premium,
+                risk_adjustment_percentage=risk_adjustment,
+                adjusted_premium=adjusted_premium,
+                final_premium=final_premium,
+                gst_percentage=gst_pct,
+                gst_amount=gst_amount,
+                total_premium_with_gst=total_premium,
+                sum_insured=application.requested_coverage_amount or Decimal('500000'),
+                policy_tenure_months=application.policy_tenure_months,
+                overall_score=scores['overall_score'],
+                generated_by=request.user
+            )
+            
+            # Create quote coverages
+            for cov_id in coverage_ids:
+                try:
+                    coverage = type_coverages.get(id=cov_id)
+                    QuoteCoverage.objects.create(
+                        quote=quote,
+                        coverage_type=coverage,
+                        coverage_limit=application.requested_coverage_amount or Decimal('500000'),
+                        coverage_premium=coverage.base_premium_per_unit,
+                        is_selected=True
+                    )
+                except CoverageType.DoesNotExist:
+                    pass
+            
+            # Create quote addons
+            for addon_id in addon_ids:
+                try:
+                    addon = type_addons.get(id=addon_id)
+                    QuoteAddon.objects.create(
+                        quote=quote,
+                        addon=addon,
+                        addon_premium=base_premium * (addon.premium_percentage / 100),
+                        is_selected=True
+                    )
+                except RiderAddon.DoesNotExist:
+                    pass
+            
+            generated_quotes.append((quote, scores))
+        
+        # Sort by score and create recommendations
+        generated_quotes.sort(key=lambda x: x[1]['overall_score'], reverse=True)
+        
+        # Clear old recommendations
+        QuoteRecommendation.objects.filter(application=application).delete()
+        
+        for rank, (quote, scores) in enumerate(generated_quotes[:3], start=1):
+            QuoteRecommendation.objects.create(
+                application=application,
+                customer=application.customer,
+                insurance_type=application.insurance_type,
+                recommended_quote=quote,
+                recommendation_rank=rank,
+                recommendation_reason=generate_recommendation_reason(
+                    scores, quote.insurance_company.company_name
+                ),
+                suitability_score=scores['overall_score'],
+                affordability_score=scores['affordability_score'],
+                coverage_match_score=scores['coverage_score'],
+                company_rating_score=scores['claim_ratio_score']
+            )
+        
+        # Send email notification to customer
+        if generated_quotes:
+            from apps.notifications.email_service import send_quote_generated_email
+            send_quote_generated_email(generated_quotes[0][0])
+        
+        # Return response
+        recommendations = QuoteRecommendation.objects.filter(
+            application=application
+        ).select_related('recommended_quote__insurance_company')
+        
+        all_quotes = [q for q, _ in generated_quotes]
+        
+        return Response({
+            'message': f'Generated {len(generated_quotes)} quotes.',
+            'application_id': application.id,
+            'total_quotes': len(generated_quotes),
+            'recommendations': QuoteRecommendationSerializer(recommendations, many=True).data,
+            'all_quotes': QuoteListSerializer(all_quotes, many=True).data
+        }, status=status.HTTP_201_CREATED)
+

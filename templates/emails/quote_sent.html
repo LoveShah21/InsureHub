@@ -1,0 +1,57 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Quote Ready for Review - InsureHub{% endblock %}
+
+{% block content %}
+<p class="greeting">Hello {{ customer_name }},</p>
+
+<p class="message">
+    We're pleased to share a personalized insurance quote with you. 
+    Please review the details below and take action before the quote expires.
+</p>
+
+<div class="highlight-box">
+    <div class="label">Quote Number</div>
+    <div class="value">{{ quote_number }}</div>
+</div>
+
+<table class="info-table">
+    <tr>
+        <td>Insurance Company</td>
+        <td>{{ company_name }}</td>
+    </tr>
+    <tr>
+        <td>Insurance Type</td>
+        <td>{{ insurance_type }}</td>
+    </tr>
+    <tr>
+        <td>Sum Insured</td>
+        <td>{{ sum_insured }}</td>
+    </tr>
+    <tr>
+        <td>Total Premium</td>
+        <td style="color: #667eea; font-size: 20px;">{{ total_premium }}</td>
+    </tr>
+    <tr>
+        <td>Valid Until</td>
+        <td>{{ validity_date }}</td>
+    </tr>
+</table>
+
+<p class="message">
+    This quote has been carefully tailored to match your requirements. 
+    If you're satisfied with the coverage and premium, you can proceed 
+    to accept the quote and make payment.
+</p>
+
+<div style="text-align: center;">
+    <a href="http://{{ login_url }}/customer/quotes/" class="btn">
+        Review & Accept Quote
+    </a>
+</div>
+
+<p class="message" style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 6px; font-size: 14px;">
+    ⏰ <strong>Important:</strong> This quote is valid until {{ validity_date }}. 
+    Please review and accept before it expires.
+</p>
+{% endblock %}

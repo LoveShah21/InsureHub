@@ -370,14 +370,14 @@
 
     async function verifyDocument(docId, isApproved) {
         try {
-            const response = await fetch('/api/v1/documents/' + docId + '/verify/', {
+            const response = await fetch('/api/v1/applications/{{ application.id }}/documents/' + docId + '/verify/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
                 credentials: 'include',
-                body: JSON.stringify({ status: isApproved ? 'VERIFIED' : 'REJECTED' })
+                body: JSON.stringify({ action: isApproved ? 'verify' : 'reject', notes: isApproved ? '' : 'Rejected by backoffice' })
             });
 
             if (response.ok) {

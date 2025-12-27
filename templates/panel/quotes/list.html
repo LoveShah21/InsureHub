@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Quotes Management - Admin{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-shield"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_coverage_types' %}">
+        <i class="bi bi-layers"></i> Coverages
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_rider_addons' %}">
+        <i class="bi bi-plus-circle"></i> Add-ons
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_companies' %}">
+        <i class="bi bi-building"></i> Companies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_policies' %}">
+        <i class="bi bi-file-earmark-lock"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_customers' %}">
+        <i class="bi bi-person-badge"></i> Customers
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Quotes Management{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ stats.total }}</h4>
+                        <small>Total Quotes</small>
+                    </div>
+                    <i class="bi bi-calculator display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ stats.generated }}</h4>
+                        <small>Generated</small>
+                    </div>
+                    <i class="bi bi-file-earmark-plus display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ stats.accepted }}</h4>
+                        <small>Accepted</small>
+                    </div>
+                    <i class="bi bi-check-circle display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">{{ stats.sent }}</h4>
+                        <small>Sent to Customer</small>
+                    </div>
+                    <i class="bi bi-send display-6"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="q" class="form-control" placeholder="Search..." value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="GENERATED" {% if request.GET.status == 'GENERATED' %}selected{% endif %}>Generated</option>
+                    <option value="SENT" {% if request.GET.status == 'SENT' %}selected{% endif %}>Sent</option>
+                    <option value="ACCEPTED" {% if request.GET.status == 'ACCEPTED' %}selected{% endif %}>Accepted</option>
+                    <option value="REJECTED" {% if request.GET.status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                    <option value="EXPIRED" {% if request.GET.status == 'EXPIRED' %}selected{% endif %}>Expired</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="insurance_type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for type in insurance_types %}
+                    <option value="{{ type.id }}" {% if request.GET.insurance_type == type.id|stringformat:"s" %}selected{% endif %}>{{ type.type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="company" class="form-select">
+                    <option value="">All Companies</option>
+                    {% for company in companies %}
+                    <option value="{{ company.id }}" {% if request.GET.company == company.id|stringformat:"s" %}selected{% endif %}>{{ company.company_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a href="{% url 'admin_quotes' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Quotes Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Quote #</th>
+                        <th>Customer</th>
+                        <th>Insurance Type</th>
+                        <th>Company</th>
+                        <th>Premium</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for quote in quotes %}
+                    <tr>
+                        <td><strong>{{ quote.quote_number }}</strong></td>
+                        <td>{{ quote.customer.user.get_full_name|default:quote.customer.user.email }}</td>
+                        <td>{{ quote.insurance_type.type_name }}</td>
+                        <td>{{ quote.insurance_company.company_name }}</td>
+                        <td>₹{{ quote.total_premium_with_gst|floatformat:0 }}</td>
+                        <td>
+                            <span class="badge bg-{% if quote.overall_score >= 80 %}success{% elif quote.overall_score >= 60 %}warning{% else %}secondary{% endif %}">
+                                {{ quote.overall_score }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if quote.status == 'ACCEPTED' %}success{% elif quote.status == 'SENT' %}primary{% elif quote.status == 'GENERATED' %}info{% elif quote.status == 'EXPIRED' %}secondary{% else %}danger{% endif %}">
+                                {{ quote.status }}
+                            </span>
+                        </td>
+                        <td>{{ quote.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'backoffice_quote_detail' quote.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">No quotes found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

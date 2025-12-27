@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+
+{% block title %}Rider Add-ons - Admin{% endblock %}
+
+{% block sidebar_nav %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-shield"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_coverage_types' %}">
+        <i class="bi bi-layers"></i> Coverages
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="{% url 'admin_rider_addons' %}">
+        <i class="bi bi-plus-circle"></i> Add-ons
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_companies' %}">
+        <i class="bi bi-building"></i> Companies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'admin_policies' %}">
+        <i class="bi bi-file-earmark-lock"></i> Policies
+    </a>
+</li>
+{% endblock %}
+
+{% block page_title %}Rider Add-ons{% endblock %}
+
+{% block topbar_right %}
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+    <i class="bi bi-plus-circle"></i> Add New
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Search by name or code..." value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-3">
+                <select name="type" class="form-select">
+                    <option value="">All Insurance Types</option>
+                    {% for type in insurance_types %}
+                    <option value="{{ type.id }}" {% if request.GET.type == type.id|stringformat:"s" %}selected{% endif %}>{{ type.type_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="is_active" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="true" {% if request.GET.is_active == 'true' %}selected{% endif %}>Active</option>
+                    <option value="false" {% if request.GET.is_active == 'false' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a href="{% url 'admin_rider_addons' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add-ons Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Add-on Name</th>
+                        <th>Code</th>
+                        <th>Insurance Type</th>
+                        <th>Premium %</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for addon in addons %}
+                    <tr>
+                        <td>
+                            <strong>{{ addon.addon_name }}</strong>
+                            {% if addon.description %}
+                            <br><small class="text-muted">{{ addon.description|truncatewords:10 }}</small>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ addon.addon_code }}</code></td>
+                        <td>{{ addon.insurance_type.type_name }}</td>
+                        <td>{{ addon.premium_percentage }}%</td>
+                        <td>
+                            <span class="badge bg-{% if addon.is_active %}success{% else %}secondary{% endif %}">
+                                {% if addon.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editAddon({{ addon.id }}, '{{ addon.addon_name }}', '{{ addon.addon_code }}', '{{ addon.insurance_type.id }}', '{{ addon.premium_percentage }}', '{{ addon.description|default:"" }}', {{ addon.is_active|yesno:"true,false" }})">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteAddon({{ addon.id }}, '{{ addon.addon_name }}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No add-ons found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Add New Rider Add-on</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Add-on Name *</label>
+                        <input type="text" name="addon_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Add-on Code *</label>
+                        <input type="text" name="addon_code" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Insurance Type *</label>
+                        <select name="insurance_type" class="form-select" required>
+                            {% for type in insurance_types %}
+                            <option value="{{ type.id }}">{{ type.type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Premium Percentage *</label>
+                        <div class="input-group">
+                            <input type="number" name="premium_percentage" class="form-control" step="0.01" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="createIsActive" checked>
+                        <label class="form-check-label" for="createIsActive">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Add-on</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="addon_id" id="editAddonId">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit Rider Add-on</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Add-on Name *</label>
+                        <input type="text" name="addon_name" id="editAddonName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Add-on Code</label>
+                        <input type="text" id="editAddonCode" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Insurance Type</label>
+                        <select name="insurance_type" id="editInsuranceType" class="form-select" disabled>
+                            {% for type in insurance_types %}
+                            <option value="{{ type.id }}">{{ type.type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Premium Percentage *</label>
+                        <div class="input-group">
+                            <input type="number" name="premium_percentage" id="editPremiumPercentage" class="form-control" step="0.01" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" id="editDescription" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="editIsActive">
+                        <label class="form-check-label" for="editIsActive">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Add-on</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Form -->
+<form id="deleteForm" method="post" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="addon_id" id="deleteAddonId">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editAddon(id, name, code, typeId, premium, description, isActive) {
+    document.getElementById('editAddonId').value = id;
+    document.getElementById('editAddonName').value = name;
+    document.getElementById('editAddonCode').value = code;
+    document.getElementById('editInsuranceType').value = typeId;
+    document.getElementById('editPremiumPercentage').value = premium;
+    document.getElementById('editDescription').value = description;
+    document.getElementById('editIsActive').checked = isActive;
+    
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+function deleteAddon(id, name) {
+    if (confirm('Are you sure you want to delete "' + name + '"? This action cannot be undone.')) {
+        document.getElementById('deleteAddonId').value = id;
+        document.getElementById('deleteForm').submit();
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Payment Successful - InsureHub{% endblock %}
+
+{% block content %}
+<p class="greeting">Hello {{ customer_name }},</p>
+
+<p class="message">
+    ✅ <strong>Payment Successful!</strong> Thank you for your payment. 
+    Your transaction has been processed successfully.
+</p>
+
+<div class="highlight-box" style="background-color: #d4edda; border-left-color: #28a745;">
+    <div class="label" style="color: #155724;">Amount Paid</div>
+    <div class="value" style="color: #155724; font-size: 28px;">{{ amount }}</div>
+</div>
+
+<table class="info-table">
+    <tr>
+        <td>Payment ID</td>
+        <td>{{ payment_id }}</td>
+    </tr>
+    <tr>
+        <td>Payment Date</td>
+        <td>{{ payment_date }}</td>
+    </tr>
+    {% if policy_number %}
+    <tr>
+        <td>Policy Number</td>
+        <td style="color: #667eea; font-weight: 600;">{{ policy_number }}</td>
+    </tr>
+    {% endif %}
+</table>
+
+{% if policy_number %}
+<p class="message" style="padding: 15px; background-color: #d4edda; border-radius: 6px;">
+    🎉 <strong>Your policy has been issued!</strong><br>
+    Policy Number: <strong>{{ policy_number }}</strong><br>
+    You can view and download your policy from your dashboard.
+</p>
+{% endif %}
+
+<div style="text-align: center;">
+    <a href="http://{{ login_url }}/customer/policies/" class="btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+        View My Policy
+    </a>
+</div>
+
+<p class="message" style="margin-top: 30px; font-size: 14px; color: #888;">
+    A detailed invoice has been generated and is available in your account. 
+    Please keep this email for your records.
+</p>
+{% endblock %}
