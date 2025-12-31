@@ -3,51 +3,7 @@
 {% block title %}Customers Management - Admin{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_users' %}">
-        <i class="bi bi-people"></i> Users
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
-        <i class="bi bi-shield"></i> Insurance Types
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_coverage_types' %}">
-        <i class="bi bi-layers"></i> Coverages
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_rider_addons' %}">
-        <i class="bi bi-plus-circle"></i> Add-ons
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_companies' %}">
-        <i class="bi bi-building"></i> Companies
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_quotes' %}">
-        <i class="bi bi-calculator"></i> Quotes
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_policies' %}">
-        <i class="bi bi-file-earmark-lock"></i> Policies
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'admin_customers' %}">
-        <i class="bi bi-person-badge"></i> Customers
-    </a>
-</li>
+{% include 'includes/sidebar_admin.html' %}
 {% endblock %}
 
 {% block page_title %}Customers Management{% endblock %}
@@ -86,10 +42,10 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h3 class="mb-0">{{ stats.kyc_verified }}</h3>
-                        <small>KYC Verified</small>
+                        <h3 class="mb-0">{{ stats.with_documents }}</h3>
+                        <small>With Documents</small>
                     </div>
-                    <i class="bi bi-check-circle display-5"></i>
+                    <i class="bi bi-file-earmark-check display-5"></i>
                 </div>
             </div>
         </div>
@@ -100,20 +56,12 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-5">
                 <input type="text" name="q" class="form-control" placeholder="Search by name, email, phone..." value="{{ request.GET.q }}">
             </div>
-            <div class="col-md-2">
-                <select name="kyc_status" class="form-select">
-                    <option value="">All KYC Status</option>
-                    <option value="VERIFIED" {% if request.GET.kyc_status == 'VERIFIED' %}selected{% endif %}>Verified</option>
-                    <option value="PENDING" {% if request.GET.kyc_status == 'PENDING' %}selected{% endif %}>Pending</option>
-                    <option value="REJECTED" {% if request.GET.kyc_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
-                </select>
-            </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
                 <select name="has_policies" class="form-select">
-                    <option value="">All</option>
+                    <option value="">All Customers</option>
                     <option value="yes" {% if request.GET.has_policies == 'yes' %}selected{% endif %}>With Policies</option>
                     <option value="no" {% if request.GET.has_policies == 'no' %}selected{% endif %}>Without Policies</option>
                 </select>
@@ -135,7 +83,7 @@
                     <tr>
                         <th>Customer</th>
                         <th>Contact</th>
-                        <th>KYC Status</th>
+                        <th>Documents</th>
                         <th>Applications</th>
                         <th>Policies</th>
                         <th>Claims</th>
@@ -152,9 +100,11 @@
                         </td>
                         <td>{{ customer.phone_number|default:"-" }}</td>
                         <td>
-                            <span class="badge bg-{% if customer.kyc_status == 'VERIFIED' %}success{% elif customer.kyc_status == 'REJECTED' %}danger{% else %}warning{% endif %}">
-                                {{ customer.kyc_status|default:"PENDING" }}
-                            </span>
+                            {% if customer.pan_number or customer.aadhar_number %}
+                            <span class="badge bg-success"><i class="bi bi-check"></i> Provided</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% endif %}
                         </td>
                         <td>{{ customer.applications_count }}</td>
                         <td>{{ customer.policies_count }}</td>

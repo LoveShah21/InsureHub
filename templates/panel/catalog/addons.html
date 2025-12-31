@@ -3,46 +3,7 @@
 {% block title %}Rider Add-ons - Admin{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_users' %}">
-        <i class="bi bi-people"></i> Users
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_insurance_types' %}">
-        <i class="bi bi-shield"></i> Insurance Types
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_coverage_types' %}">
-        <i class="bi bi-layers"></i> Coverages
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'admin_rider_addons' %}">
-        <i class="bi bi-plus-circle"></i> Add-ons
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_companies' %}">
-        <i class="bi bi-building"></i> Companies
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_quotes' %}">
-        <i class="bi bi-calculator"></i> Quotes
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'admin_policies' %}">
-        <i class="bi bi-file-earmark-lock"></i> Policies
-    </a>
-</li>
+{% include 'includes/sidebar_admin.html' %}
 {% endblock %}
 
 {% block page_title %}Rider Add-ons{% endblock %}

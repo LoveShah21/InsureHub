@@ -3,26 +3,7 @@
 {% block title %}Generate Quotes - Backoffice{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_applications' %}">
-        <i class="bi bi-file-earmark-text"></i> Applications
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'backoffice_quotes' %}">
-        <i class="bi bi-calculator"></i> Quotes
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_claims' %}">
-        <i class="bi bi-clipboard-check"></i> Claims
-    </a>
-</li>
+{% include 'includes/sidebar_backoffice.html' %}
 {% endblock %}
 
 {% block page_title %}Generate Quotes{% endblock %}
@@ -366,11 +347,17 @@ function showResults(result) {
     `;
     
     result.recommendations.forEach(rec => {
+        const quote = rec.quote || {};
+        const companyName = quote.company_name || '-';
+        const premium = quote.total_premium_with_gst 
+            ? '₹' + parseFloat(quote.total_premium_with_gst).toLocaleString('en-IN') 
+            : '-';
+        
         html += `
             <tr>
                 <td><span class="badge bg-${rec.recommendation_rank === 1 ? 'success' : 'secondary'}">#${rec.recommendation_rank}</span></td>
-                <td>${rec.recommended_quote?.insurance_company?.company_name || '-'}</td>
-                <td>₹${rec.recommended_quote?.total_premium_with_gst?.toLocaleString() || '-'}</td>
+                <td>${companyName}</td>
+                <td>${premium}</td>
                 <td>${rec.suitability_score}/100</td>
             </tr>
         `;

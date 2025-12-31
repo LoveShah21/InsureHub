@@ -3,44 +3,7 @@
 {% block title %}Notifications - InsureHub{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_applications' %}">
-        <i class="bi bi-file-earmark-text"></i> Applications
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_quotes' %}">
-        <i class="bi bi-calculator"></i> Quotes
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_policies' %}">
-        <i class="bi bi-shield-check"></i> Policies
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_claims' %}">
-        <i class="bi bi-clipboard-check"></i> Claims
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'customer_notifications' %}">
-        <i class="bi bi-bell"></i> Notifications
-        {% if unread_count > 0 %}
-        <span class="badge bg-danger ms-1">{{ unread_count }}</span>
-        {% endif %}
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_profile' %}">
-        <i class="bi bi-person"></i> Profile
-    </a>
-</li>
+{% include 'includes/sidebar_customer.html' %}
 {% endblock %}
 
 {% block page_title %}Notifications{% endblock %}
@@ -165,7 +128,7 @@ document.querySelectorAll('[data-notification-id]').forEach(item => {
         const id = this.dataset.notificationId;
         if (this.classList.contains('bg-light')) {
             try {
-                await fetch('/api/v1/notifications/' + id + '/mark-read/', {
+                await fetch('/api/v1/notifications/' + id + '/read/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -185,7 +148,7 @@ document.querySelectorAll('[data-notification-id]').forEach(item => {
 // Mark all as read
 document.getElementById('markAllRead')?.addEventListener('click', async function() {
     try {
-        const response = await fetch('/api/v1/notifications/mark-all-read/', {
+        const response = await fetch('/api/v1/notifications/read-all/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

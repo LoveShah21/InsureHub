@@ -3,21 +3,7 @@
 {% block title %}Review Application - Backoffice{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'backoffice_applications' %}">
-        <i class="bi bi-file-earmark-text"></i> Applications
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_claims' %}">
-        <i class="bi bi-clipboard-check"></i> Claims
-    </a>
-</li>
+{% include 'includes/sidebar_backoffice.html' %}
 {% endblock %}
 
 {% block page_title %}Review Application{% endblock %}
@@ -108,7 +94,7 @@
                         {% for doc in documents %}
                         <tr>
                             <td>{{ doc.document_type }}</td>
-                            <td>{{ doc.uploaded_at|date:"M d, Y" }}</td>
+                            <td>{{ doc.upload_date|date:"M d, Y" }}</td>
                             <td>
                                 <span class="badge bg-{% if doc.verification_status == 'VERIFIED' %}success{% elif doc.verification_status == 'REJECTED' %}danger{% else %}warning{% endif %}">
                                     {{ doc.verification_status|default:"PENDING" }}

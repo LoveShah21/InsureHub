@@ -190,7 +190,7 @@ class CustomerApplicationDetailView(CustomerRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['documents'] = self.object.documents.all().order_by('-uploaded_at')
+        context['documents'] = self.object.documents.all().order_by('-upload_date')
         return context
 
 
@@ -290,7 +290,7 @@ class CustomerClaimDetailView(CustomerRequiredMixin, DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['documents'] = self.object.documents.all().order_by('-uploaded_at')
+        context['documents'] = self.object.documents.all().order_by('-upload_date')
         return context
 
 
@@ -302,12 +302,14 @@ class CustomerNotificationsView(CustomerRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         from apps.notifications.models import Notification
         
-        notifications = Notification.objects.filter(
-            user=self.request.user
-        ).order_by('-created_at')[:100]
+        # Get base queryset
+        base_qs = Notification.objects.filter(user=self.request.user)
         
-        context['notifications'] = notifications
-        context['unread_count'] = notifications.filter(is_read=False).count()
+        # Count unread before slicing
+        context['unread_count'] = base_qs.filter(is_read=False).count()
+        
+        # Then slice for display
+        context['notifications'] = base_qs.order_by('-created_at')[:100]
         return context
 
 
@@ -452,7 +454,7 @@ class BackofficeApplicationDetailView(BackofficeRequiredMixin, DetailView):
         # Documents
         context['documents'] = ApplicationDocument.objects.filter(
             application=application
-        ).order_by('-uploaded_at')
+        ).order_by('-upload_date')
         
         # Quotes generated for this application
         context['quotes'] = Quote.objects.filter(
@@ -465,8 +467,8 @@ class BackofficeApplicationDetailView(BackofficeRequiredMixin, DetailView):
         except:
             context['risk_profile'] = None
         
-        # Form data (from application fields)
-        context['form_data'] = application.form_data or {}
+        # Form data (from application fields if exists)
+        context['form_data'] = getattr(application, 'form_data', None) or {}
         
         # Insurance companies for quote generation
         context['insurance_companies'] = InsuranceCompany.objects.filter(is_active=True)
@@ -978,11 +980,6 @@ class AdminCustomerListView(AdminRequiredMixin, ListView):
                 Q(phone_number__icontains=search_query)
             )
         
-        # KYC status filter
-        kyc_status = self.request.GET.get('kyc_status')
-        if kyc_status:
-            queryset = queryset.filter(kyc_status=kyc_status)
-        
         # Has policies filter
         has_policies = self.request.GET.get('has_policies')
         if has_policies == 'yes':
@@ -998,12 +995,14 @@ class AdminCustomerListView(AdminRequiredMixin, ListView):
         # Stats
         total = CustomerProfile.objects.count()
         with_policies = CustomerProfile.objects.filter(policies__isnull=False).distinct().count()
-        kyc_verified = CustomerProfile.objects.filter(kyc_status='VERIFIED').count()
+        with_documents = CustomerProfile.objects.filter(
+            Q(pan_number__isnull=False) | Q(aadhar_number__isnull=False)
+        ).exclude(pan_number='', aadhar_number='').count()
         
         context['stats'] = {
             'total': total,
             'with_policies': with_policies,
-            'kyc_verified': kyc_verified
+            'with_documents': with_documents
         }
         return context
 

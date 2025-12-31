@@ -1,0 +1,41 @@
+<!-- Customer Sidebar Navigation -->
+<li class="nav-item">
+    <a class="nav-link {% if request.resolver_match.url_name == 'customer_dashboard' %}active{% endif %}" href="{% url 'customer_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'application' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'customer_applications' %}">
+        <i class="bi bi-file-earmark-text"></i> Applications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'quote' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'customer_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'polic' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'customer_policies' %}">
+        <i class="bi bi-shield-check"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'claim' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'customer_claims' %}">
+        <i class="bi bi-clipboard-check"></i> Claims
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'notification' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'customer_notifications' %}">
+        <i class="bi bi-bell"></i> Notifications
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'profile' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'customer_profile' %}">
+        <i class="bi bi-person"></i> Profile
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'explore' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'policy_explore' %}">
+        <i class="bi bi-search"></i> Explore Plans
+    </a>
+</li>

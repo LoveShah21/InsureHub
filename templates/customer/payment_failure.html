@@ -3,16 +3,7 @@
 {% block title %}Payment Failed - InsureHub{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_quotes' %}">
-        <i class="bi bi-calculator"></i> Quotes
-    </a>
-</li>
+{% include 'includes/sidebar_customer.html' %}
 {% endblock %}
 
 {% block page_title %}Payment Failed{% endblock %}

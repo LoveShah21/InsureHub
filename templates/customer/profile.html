@@ -3,41 +3,7 @@
 {% block title %}My Profile - InsureHub{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_applications' %}">
-        <i class="bi bi-file-earmark-text"></i> Applications
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_quotes' %}">
-        <i class="bi bi-calculator"></i> Quotes
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_policies' %}">
-        <i class="bi bi-shield-check"></i> Policies
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'customer_claims' %}">
-        <i class="bi bi-clipboard-check"></i> Claims
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'policy_explore' %}">
-        <i class="bi bi-search"></i> Explore
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'customer_profile' %}">
-        <i class="bi bi-person"></i> Profile
-    </a>
-</li>
+{% include 'includes/sidebar_customer.html' %}
 {% endblock %}
 
 {% block page_title %}My Profile{% endblock %}

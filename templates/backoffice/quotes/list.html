@@ -3,26 +3,7 @@
 {% block title %}Manage Quotes - Backoffice{% endblock %}
 
 {% block sidebar_nav %}
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_dashboard' %}">
-        <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_applications' %}">
-        <i class="bi bi-file-earmark-text"></i> Applications
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link active" href="{% url 'backoffice_quotes' %}">
-        <i class="bi bi-calculator"></i> Quotes
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'backoffice_claims' %}">
-        <i class="bi bi-clipboard-check"></i> Claims
-    </a>
-</li>
+{% include 'includes/sidebar_backoffice.html' %}
 {% endblock %}
 
 {% block page_title %}Quote Management{% endblock %}

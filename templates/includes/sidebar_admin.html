@@ -1,0 +1,86 @@
+<!-- Admin Panel Sidebar Navigation -->
+<li class="nav-item">
+    <a class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" href="{% url 'admin_dashboard' %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_user' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_users' %}">
+        <i class="bi bi-people"></i> Users
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_customer' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_customers' %}">
+        <i class="bi bi-person-badge"></i> Customers
+    </a>
+</li>
+
+<!-- Catalog Management -->
+<li class="nav-item mt-3">
+    <small class="text-white-50 px-3">CATALOG</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_insurance_type' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_insurance_types' %}">
+        <i class="bi bi-shield"></i> Insurance Types
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_coverage' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_coverage_types' %}">
+        <i class="bi bi-layers"></i> Coverages
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_rider_addon' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_rider_addons' %}">
+        <i class="bi bi-plus-circle"></i> Add-ons
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_compan' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_companies' %}">
+        <i class="bi bi-building"></i> Companies
+    </a>
+</li>
+
+<!-- Operations -->
+<li class="nav-item mt-3">
+    <small class="text-white-50 px-3">OPERATIONS</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_quote' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_quotes' %}">
+        <i class="bi bi-calculator"></i> Quotes
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_polic' in request.resolver_match.url_name and 'admin_policy' not in request.resolver_match.url_name or request.resolver_match.url_name == 'admin_policies' %}active{% endif %}" href="{% url 'admin_policies' %}">
+        <i class="bi bi-file-earmark-lock"></i> Policies
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_payment' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_payments' %}">
+        <i class="bi bi-credit-card"></i> Payments
+    </a>
+</li>
+
+<!-- Configuration -->
+<li class="nav-item mt-3">
+    <small class="text-white-50 px-3">CONFIGURATION</small>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_premium_slab' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_premium_slabs' %}">
+        <i class="bi bi-sliders"></i> Premium Slabs
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_discount' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_discount_rules' %}">
+        <i class="bi bi-percent"></i> Discount Rules
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_business_config' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_business_config' %}">
+        <i class="bi bi-gear"></i> Business Config
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link {% if 'admin_analytics' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'admin_analytics' %}">
+        <i class="bi bi-graph-up"></i> Analytics
+    </a>
+</li>
