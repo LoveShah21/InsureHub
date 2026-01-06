@@ -13,6 +13,11 @@ from datetime import timedelta
 from decouple import config, Csv
 import os
 
+# PyMySQL configuration - Use PyMySQL as MySQLdb replacement
+# This avoids the need to compile mysqlclient (which requires MySQL dev headers)
+import pymysql
+pymysql.install_as_MySQLdb()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
