@@ -16,6 +16,10 @@ import os
 # PyMySQL configuration - Use PyMySQL as MySQLdb replacement
 # This avoids the need to compile mysqlclient (which requires MySQL dev headers)
 import pymysql
+
+# Override version_info to satisfy Django 4.2+ requirement for mysqlclient 2.2.1+
+# PyMySQL reports as 1.4.6 which Django rejects, so we fake the version
+pymysql.version_info = (2, 2, 1, "final", 0)
 pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
